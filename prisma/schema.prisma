@@ -1,0 +1,255 @@
+// =============================================================================
+// M-CORE — Prisma Schema
+// =============================================================================
+//
+// Dokumen ini adalah implementasi DATABASE.md ke dalam Prisma ORM.
+//
+// PENTING:
+// - Setiap perubahan schema HARUS mengikuti DATABASE.md terlebih dahulu.
+// - Setiap perubahan schema HARUS melalui migrasi (prisma migrate dev).
+// - JANGAN mengubah schema ini secara manual di production.
+// - Baca DATABASE.md sebelum menambahkan field baru.
+//
+// Referensi: DATABASE.md v1.0.0
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// ENUM DEFINITIONS
+// Nilai enum harus sinkron dengan src/shared/enums/
+// Referensi: DATABASE.md §8, §9, §16
+// =============================================================================
+
+/// Jenis kelamin siswa.
+/// Nilai: male | female
+/// Referensi: DATABASE.md §8
+enum Gender {
+  male
+  female
+}
+
+/// Status utama siswa dalam sistem.
+/// ACTIVE = masih mengikuti program
+/// ALUMNI = telah menyelesaikan perjalanan pendidikan
+/// INACTIVE = tidak sedang aktif, belum alumni
+/// Referensi: DATABASE.md §9, BUSINESS_RULES.md §10-13
+enum StudentStatus {
+  active
+  alumni
+  inactive
+}
+
+/// Status riwayat program siswa.
+/// ENROLLED = sedang aktif di program ini (program aktif)
+/// COMPLETED = selesai dari program/kelas ini
+/// TRANSFERRED = pindah ke program lain (lihat BUSINESS_RULES.md §22)
+/// DROPPED = berhenti
+/// CANCELLED = dibatalkan administratif
+/// Referensi: DATABASE.md §16, BUSINESS_RULES.md §16-25
+enum ProgramHistoryStatus {
+  enrolled
+  completed
+  transferred
+  dropped
+  cancelled
+}
+
+// =============================================================================
+// MODEL: Student
+//
+// Tabel master identitas siswa. Satu siswa hanya boleh memiliki satu record.
+// student_id adalah identitas internal M-CORE yang TIDAK BOLEH berubah.
+//
+// PRINSIP UTAMA: ONE STUDENT — ONE IDENTITY
+// Referensi: DATABASE.md §6, §7, BUSINESS_RULES.md §4-5
+// =============================================================================
+model Student {
+  /// ID internal M-CORE. UUID, tidak boleh berubah sepanjang lifecycle siswa.
+  /// Jangan pernah menggunakan NIK, email, atau nomor HP sebagai student_id.
+  id         String        @id @default(uuid()) @map("student_id")
+
+  /// Nama lengkap siswa. Required.
+  fullName   String        @map("full_name") @db.VarChar(150)
+
+  /// Jenis kelamin. Hanya 'male' atau 'female'.
+  gender     Gender
+
+  /// Tempat lahir. Opsional karena tidak semua siswa baru memiliki data ini.
+  birthPlace String?       @map("birth_place") @db.VarChar(100)
+
+  /// Tanggal lahir. Opsional untuk fleksibilitas input awal.
+  birthDate  DateTime?     @map("birth_date") @db.Date
+
+  /// Nomor Induk Kependudukan (16 digit).
+  /// UNIQUE jika tersedia, NULL jika belum ada.
+  /// JANGAN simpan sebagai integer — NIK bisa memiliki leading zero.
+  /// Referensi: DATABASE.md §10, BUSINESS_RULES.md §6-7
+  nik        String?       @db.VarChar(16)
+
+  /// Email siswa. UNIQUE (case-insensitive) jika tersedia.
+  /// Perbandingan email harus case-insensitive (lihat index di bawah).
+  /// Referensi: DATABASE.md §11
+  email      String?       @db.VarChar(150)
+
+  /// Nomor HP utama. Opsional.
+  phone      String?       @db.VarChar(20)
+
+  /// Nomor WhatsApp. Opsional (bisa sama atau berbeda dengan phone).
+  whatsapp   String?       @db.VarChar(20)
+
+  /// Status siswa saat ini.
+  /// Default: ACTIVE saat pertama didaftarkan.
+  /// Perubahan status harus mengikuti BUSINESS_RULES.md.
+  status     StudentStatus @default(active)
+
+  /// Timestamp dibuat. Otomatis diisi saat insert.
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+
+  /// Timestamp diperbarui. Harus diupdate setiap kali record berubah.
+  updatedAt  DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relasi: satu siswa memiliki banyak riwayat program.
+  // ON DELETE RESTRICT: Siswa tidak bisa dihapus jika masih ada program history.
+  programHistories StudentProgramHistory[]
+
+  @@map("students")
+
+  // Indeks untuk performa query.
+  // Referensi: DATABASE.md §22
+  @@index([fullName])
+  @@index([status])
+  @@index([birthDate])
+}
+
+// =============================================================================
+// MODEL: Program
+//
+// Tabel master seluruh program yang tersedia di M-CORE.
+// Contoh: MTs, MA, Pra-Universitas, Program Turkiye, dll.
+//
+// Program yang sudah tidak digunakan TIDAK boleh dihapus.
+// Gunakan isActive = false untuk menonaktifkan.
+// Referensi: DATABASE.md §12-14
+// =============================================================================
+model Program {
+  /// ID internal program.
+  id            String   @id @default(uuid()) @map("program_id")
+
+  /// Kode unik program. Contoh: MTS, MA, PRA-UNIV, TURKIYE.
+  /// UNIQUE, tidak boleh duplikat.
+  programCode   String   @unique @map("program_code") @db.VarChar(50)
+
+  /// Nama lengkap program. Contoh: "Madrasah Tsanawiyah".
+  programName   String   @map("program_name") @db.VarChar(150)
+
+  /// Jenjang pendidikan. Opsional karena tidak semua program memiliki jenjang formal.
+  /// Contoh: "SMP", "SMA", "Persiapan Universitas"
+  educationLevel String? @map("education_level") @db.VarChar(100)
+
+  /// Status aktif program.
+  /// FALSE = program tidak lagi digunakan, tapi history tetap aman.
+  /// JANGAN hapus program yang masih digunakan dalam history.
+  isActive      Boolean  @default(true) @map("is_active")
+
+  /// Timestamp dibuat.
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  /// Timestamp diperbarui.
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relasi
+  programHistories StudentProgramHistory[]
+
+  @@map("programs")
+
+  // Indeks untuk performa query.
+  @@index([programName])
+  @@index([isActive])
+}
+
+// =============================================================================
+// MODEL: StudentProgramHistory
+//
+// Menyimpan SELURUH perjalanan siswa dalam program M-CORE.
+// Ini adalah tabel paling penting untuk menjaga riwayat pendidikan.
+//
+// PRINSIP IMMUTABLE HISTORY:
+// Data historis TIDAK BOLEH diubah sembarangan.
+// Ketika perubahan terjadi:
+//   1. Record lama diubah statusnya (completed/transferred/dropped)
+//   2. Record baru dibuat untuk program/kelas berikutnya
+//   JANGAN overwrite record lama dengan data baru.
+//
+// Referensi: DATABASE.md §15-18, BUSINESS_RULES.md §16-25
+// =============================================================================
+model StudentProgramHistory {
+  /// ID riwayat. UUID, primary key.
+  id           String               @id @default(uuid()) @map("history_id")
+
+  /// Foreign key ke tabel students.
+  /// ON DELETE RESTRICT: tidak bisa hapus student jika masih punya history.
+  studentId    String               @map("student_id")
+
+  /// Foreign key ke tabel programs.
+  /// ON DELETE RESTRICT: tidak bisa hapus program jika masih digunakan history.
+  programId    String               @map("program_id")
+
+  /// Tahun akademik. Format: YYYY/YYYY. Contoh: "2024/2025", "2025/2026".
+  /// Validasi format dilakukan di application layer dengan Zod.
+  /// Referensi: DATABASE.md §17
+  academicYear String               @map("academic_year") @db.VarChar(9)
+
+  /// Level/jenjang dalam program. Opsional karena tidak semua program pakai sistem ini.
+  /// Contoh MTs: "MTs" | Pra-Univ: "Persiapan" | Bahasa: "Turkish Language"
+  level        String?              @db.VarChar(50)
+
+  /// Nama kelas. Opsional.
+  /// Contoh: "VII", "VIII", "IX", "Batch 1", "A2"
+  className    String?              @map("class_name") @db.VarChar(50)
+
+  /// Status enrollment saat ini.
+  /// ENROLLED = program aktif siswa ini.
+  /// Default: ENROLLED saat record baru dibuat.
+  status       ProgramHistoryStatus @default(enrolled)
+
+  /// Tanggal mulai enrollment. Opsional.
+  startDate    DateTime?            @map("start_date") @db.Date
+
+  /// Tanggal selesai enrollment. Diisi saat status berubah dari ENROLLED.
+  endDate      DateTime?            @map("end_date") @db.Date
+
+  /// Catatan tambahan. Opsional.
+  /// Contoh: alasan transfer, catatan akademik khusus.
+  notes        String?              @db.Text
+
+  /// Timestamp dibuat.
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz()
+
+  /// Timestamp diperbarui.
+  updatedAt    DateTime             @updatedAt @map("updated_at") @db.Timestamptz()
+
+  // Relasi
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  program Program @relation(fields: [programId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@map("student_program_history")
+
+  // Unique constraint: satu siswa tidak boleh memiliki duplikasi history
+  // untuk program dan tahun akademik yang sama.
+  // Referensi: DATABASE.md §21
+  @@unique([studentId, programId, academicYear], name: "uq_student_program_year")
+
+  // Indeks untuk performa query.
+  @@index([studentId])
+  @@index([programId])
+  @@index([academicYear])
+  @@index([status])
+  @@index([studentId, academicYear])
+}
