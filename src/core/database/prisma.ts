@@ -1,9 +1,9 @@
 /**
- * M-CORE — Prisma Database Client (Singleton)
+ * M-CORE â€” Prisma Database Client (Singleton)
  *
  * File ini mengelola koneksi database melalui Prisma ORM.
  *
- * PENTING — SERVERLESS CONSIDERATION:
+ * PENTING â€” SERVERLESS CONSIDERATION:
  * Next.js di Vercel berjalan sebagai serverless function.
  * Setiap request bisa saja menggunakan instance function yang berbeda.
  * Jika kita membuat PrismaClient baru di setiap request, akan terjadi
@@ -13,11 +13,12 @@
  * globalThis selama development (hot-reload), dan buat instance baru
  * sekali di production.
  *
- * Referensi: ARCHITECTURE.md §19, §20
+ * Referensi: ARCHITECTURE.md Â§19, Â§20
  * Referensi Prisma: https://www.prisma.io/docs/guides/performance-and-optimization/connection-management
  */
 
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
 // Deklarasi tipe untuk globalThis agar TypeScript tidak complaint
 const globalForPrisma = globalThis as unknown as {
@@ -40,6 +41,7 @@ const globalForPrisma = globalThis as unknown as {
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
+    adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
     log:
       process.env.NODE_ENV === 'development'
         ? ['query', 'error', 'warn']
@@ -52,3 +54,4 @@ export const prisma =
 if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma;
 }
+

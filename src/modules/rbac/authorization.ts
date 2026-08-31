@@ -1,0 +1,18 @@
+﻿import { prisma } from '@/core/database/prisma';
+
+export type ScopeInput = { type: 'all' | 'program' | 'class'; programId?: string; className?: string };
+
+export async function hasPermission(authId: string, permission: string) {
+  const user = await prisma.userProfile.findUnique({ where: { authId }, include: { roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } } } });
+  return Boolean(user?.isActive && user.roles.some(({ role }) => role.permissions.some(({ permission: item }) => item.code === permission)));
+}
+
+export async function hasScope(authId: string, scope: ScopeInput) {
+  const user = await prisma.userProfile.findUnique({ where: { authId }, include: { scopes: true } });
+  return Boolean(user?.isActive && user.scopes.some((item) => item.type === 'all' || (item.type === 'program' && item.programId === scope.programId) || (item.type === 'class' && item.className === scope.className)));
+}
+
+export async function can(authId: string, permission: string, scope?: ScopeInput) {
+  if (!(await hasPermission(authId, permission))) return false;
+  return scope ? hasScope(authId, scope) : true;
+}
