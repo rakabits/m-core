@@ -7,6 +7,11 @@ export async function hasPermission(authId: string, permission: string) {
   return Boolean(user?.isActive && user.roles.some(({ role }) => role.permissions.some(({ permission: item }) => item.code === permission)));
 }
 
+export async function getScopes(authId: string): Promise<ScopeInput[]> {
+  const user = await prisma.userProfile.findUnique({ where: { authId }, include: { scopes: true } });
+  return (user?.scopes ?? []).map((item) => ({ type: item.type, programId: item.programId ?? undefined, className: item.className ?? undefined }));
+}
+
 export async function hasScope(authId: string, scope: ScopeInput) {
   const user = await prisma.userProfile.findUnique({ where: { authId }, include: { scopes: true } });
   return Boolean(user?.isActive && user.scopes.some((item) => item.type === 'all' || (item.type === 'program' && item.programId === scope.programId) || (item.type === 'class' && item.className === scope.className)));
@@ -16,3 +21,4 @@ export async function can(authId: string, permission: string, scope?: ScopeInput
   if (!(await hasPermission(authId, permission))) return false;
   return scope ? hasScope(authId, scope) : true;
 }
+

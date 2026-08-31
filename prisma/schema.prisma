@@ -73,58 +73,57 @@ enum ProgramHistoryStatus {
 model Student {
   /// ID internal M-CORE. UUID, tidak boleh berubah sepanjang lifecycle siswa.
   /// Jangan pernah menggunakan NIK, email, atau nomor HP sebagai student_id.
-  id         String        @id @default(uuid()) @map("student_id")
+  id String @id @default(uuid()) @map("student_id")
 
   /// Nama lengkap siswa. Required.
-  fullName   String        @map("full_name") @db.VarChar(150)
+  fullName String @map("full_name") @db.VarChar(150)
 
   /// Jenis kelamin. Hanya 'male' atau 'female'.
-  gender     Gender
+  gender Gender
 
   /// Tempat lahir. Opsional karena tidak semua siswa baru memiliki data ini.
-  birthPlace String?       @map("birth_place") @db.VarChar(100)
+  birthPlace String? @map("birth_place") @db.VarChar(100)
 
   /// Tanggal lahir. Opsional untuk fleksibilitas input awal.
-  birthDate  DateTime?     @map("birth_date") @db.Date
+  birthDate DateTime? @map("birth_date") @db.Date
 
   /// Nomor Induk Kependudukan (16 digit).
   /// UNIQUE jika tersedia, NULL jika belum ada.
   /// JANGAN simpan sebagai integer — NIK bisa memiliki leading zero.
   /// Referensi: DATABASE.md §10, BUSINESS_RULES.md §6-7
-  nik        String?       @db.VarChar(16)
+  nik String? @db.VarChar(16)
 
   /// Email siswa. UNIQUE (case-insensitive) jika tersedia.
   /// Perbandingan email harus case-insensitive (lihat index di bawah).
   /// Referensi: DATABASE.md §11
-  email      String?       @db.VarChar(150)
+  email String? @db.VarChar(150)
 
   /// Nomor HP utama. Opsional.
-  phone      String?       @db.VarChar(20)
+  phone String? @db.VarChar(20)
 
   /// Nomor WhatsApp. Opsional (bisa sama atau berbeda dengan phone).
-  whatsapp   String?       @db.VarChar(20)
+  whatsapp String? @db.VarChar(20)
 
   /// Status siswa saat ini.
   /// Default: ACTIVE saat pertama didaftarkan.
   /// Perubahan status harus mengikuti BUSINESS_RULES.md.
-  status     StudentStatus @default(active)
+  status StudentStatus @default(active)
 
   /// Timestamp dibuat. Otomatis diisi saat insert.
-  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   /// Timestamp diperbarui. Harus diupdate setiap kali record berubah.
-  updatedAt  DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   programHistories StudentProgramHistory[]
-  userProfile UserProfile?
-
-  @@map("students")
+  userProfile      UserProfile?
 
   // Indeks untuk performa query.
   // Referensi: DATABASE.md §22
   @@index([fullName])
   @@index([status])
   @@index([birthDate])
+  @@map("students")
 }
 
 // =============================================================================
@@ -139,14 +138,14 @@ model Student {
 // =============================================================================
 model Program {
   /// ID internal program.
-  id            String   @id @default(uuid()) @map("program_id")
+  id String @id @default(uuid()) @map("program_id")
 
   /// Kode unik program. Contoh: MTS, MA, PRA-UNIV, TURKIYE.
   /// UNIQUE, tidak boleh duplikat.
-  programCode   String   @unique @map("program_code") @db.VarChar(50)
+  programCode String @unique @map("program_code") @db.VarChar(50)
 
   /// Nama lengkap program. Contoh: "Madrasah Tsanawiyah".
-  programName   String   @map("program_name") @db.VarChar(150)
+  programName String @map("program_name") @db.VarChar(150)
 
   /// Jenjang pendidikan. Opsional karena tidak semua program memiliki jenjang formal.
   /// Contoh: "SMP", "SMA", "Persiapan Universitas"
@@ -155,23 +154,22 @@ model Program {
   /// Status aktif program.
   /// FALSE = program tidak lagi digunakan, tapi history tetap aman.
   /// JANGAN hapus program yang masih digunakan dalam history.
-  isActive      Boolean  @default(true) @map("is_active")
+  isActive Boolean @default(true) @map("is_active")
 
   /// Timestamp dibuat.
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   /// Timestamp diperbarui.
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relasi
   programHistories StudentProgramHistory[]
   scopeAssignments ScopeAssignment[]
 
-  @@map("programs")
-
   // Indeks untuk performa query.
   @@index([programName])
   @@index([isActive])
+  @@map("programs")
 }
 
 // =============================================================================
@@ -191,67 +189,65 @@ model Program {
 // =============================================================================
 model StudentProgramHistory {
   /// ID riwayat. UUID, primary key.
-  id           String               @id @default(uuid()) @map("history_id")
+  id String @id @default(uuid()) @map("history_id")
 
   /// Foreign key ke tabel students.
   /// ON DELETE RESTRICT: tidak bisa hapus student jika masih punya history.
-  studentId    String               @map("student_id")
+  studentId String @map("student_id")
 
   /// Foreign key ke tabel programs.
   /// ON DELETE RESTRICT: tidak bisa hapus program jika masih digunakan history.
-  programId    String               @map("program_id")
+  programId String @map("program_id")
 
   /// Tahun akademik. Format: YYYY/YYYY. Contoh: "2024/2025", "2025/2026".
   /// Validasi format dilakukan di application layer dengan Zod.
   /// Referensi: DATABASE.md §17
-  academicYear String               @map("academic_year") @db.VarChar(9)
+  academicYear String @map("academic_year") @db.VarChar(9)
 
   /// Level/jenjang dalam program. Opsional karena tidak semua program pakai sistem ini.
   /// Contoh MTs: "MTs" | Pra-Univ: "Persiapan" | Bahasa: "Turkish Language"
-  level        String?              @db.VarChar(50)
+  level String? @db.VarChar(50)
 
   /// Nama kelas. Opsional.
   /// Contoh: "VII", "VIII", "IX", "Batch 1", "A2"
-  className    String?              @map("class_name") @db.VarChar(50)
+  className String? @map("class_name") @db.VarChar(50)
 
   /// Status enrollment saat ini.
   /// ENROLLED = program aktif siswa ini.
   /// Default: ENROLLED saat record baru dibuat.
-  status       ProgramHistoryStatus @default(enrolled)
+  status ProgramHistoryStatus @default(enrolled)
 
   /// Tanggal mulai enrollment. Opsional.
-  startDate    DateTime?            @map("start_date") @db.Date
+  startDate DateTime? @map("start_date") @db.Date
 
   /// Tanggal selesai enrollment. Diisi saat status berubah dari ENROLLED.
-  endDate      DateTime?            @map("end_date") @db.Date
+  endDate DateTime? @map("end_date") @db.Date
 
   /// Catatan tambahan. Opsional.
   /// Contoh: alasan transfer, catatan akademik khusus.
-  notes        String?              @db.Text
+  notes String? @db.Text
 
   /// Timestamp dibuat.
-  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
 
   /// Timestamp diperbarui.
-  updatedAt    DateTime             @updatedAt @map("updated_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relasi
   student Student @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   program Program @relation(fields: [programId], references: [id], onDelete: Restrict, onUpdate: Cascade)
 
-  @@map("student_program_history")
-
   // Unique constraint: satu siswa tidak boleh memiliki duplikasi history
   // untuk program dan tahun akademik yang sama.
   // Referensi: DATABASE.md §21
   @@unique([studentId, programId, academicYear], name: "uq_student_program_year")
-
   // Indeks untuk performa query.
   @@index([studentId])
   @@index([programId])
   @@index([academicYear])
   @@index([status])
   @@index([studentId, academicYear])
+  @@map("student_program_history")
 }
 
 enum UserRole {
@@ -278,17 +274,18 @@ model UserProfile {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  student Student? @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  roles   UserRoleAssignment[]
-  scopes  ScopeAssignment[]
+  student   Student?             @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  roles     UserRoleAssignment[]
+  scopes    ScopeAssignment[]
+  auditLogs AuditLog[]
 
   @@map("user_profiles")
 }
 
 model Role {
-  id          String   @id @default(uuid()) @map("role_id")
-  name        UserRole @unique
-  description String?  @db.VarChar(255)
+  id          String               @id @default(uuid()) @map("role_id")
+  name        UserRole             @unique
+  description String?              @db.VarChar(255)
   users       UserRoleAssignment[]
   permissions RolePermission[]
 
@@ -296,9 +293,9 @@ model Role {
 }
 
 model Permission {
-  id          String   @id @default(uuid()) @map("permission_id")
-  code        String   @unique @db.VarChar(100)
-  description String?  @db.VarChar(255)
+  id          String           @id @default(uuid()) @map("permission_id")
+  code        String           @unique @db.VarChar(100)
+  description String?          @db.VarChar(255)
   roles       RolePermission[]
 
   @@map("permissions")
@@ -328,11 +325,11 @@ model RolePermission {
 }
 
 model ScopeAssignment {
-  id        String     @id @default(uuid()) @map("scope_id")
-  userId    String     @map("user_id")
+  id        String    @id @default(uuid()) @map("scope_id")
+  userId    String    @map("user_id")
   type      ScopeType
-  programId String?    @map("program_id")
-  className String?    @map("class_name") @db.VarChar(50)
+  programId String?   @map("program_id")
+  className String?   @map("class_name") @db.VarChar(50)
 
   user    UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
   program Program?    @relation(fields: [programId], references: [id], onDelete: SetNull)
@@ -341,4 +338,21 @@ model ScopeAssignment {
   @@index([programId])
   @@index([type])
   @@map("scope_assignments")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @map("audit_id")
+  actorId    String?  @map("actor_id")
+  action     String   @db.VarChar(80)
+  resource   String   @db.VarChar(80)
+  resourceId String?  @map("resource_id") @db.VarChar(100)
+  changes    Json?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  actor UserProfile? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId])
+  @@index([resource, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
 }
