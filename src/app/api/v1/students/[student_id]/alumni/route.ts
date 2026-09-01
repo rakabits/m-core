@@ -1,0 +1,6 @@
+﻿import { NextResponse } from 'next/server';
+import { createSupabaseServerClient } from '@/lib/supabase/server';
+import { hasPermission } from '@/modules/rbac/authorization';
+import { markAlumni } from '@/modules/program-history/service';
+async function actor(){const s=await createSupabaseServerClient();return (await s.auth.getUser()).data.user}
+export async function POST(_:Request,c:{params:Promise<{student_id:string}>}){const u=await actor();if(!u)return NextResponse.json({success:false,error:{code:'UNAUTHORIZED'}},{status:401});if(!(await hasPermission(u.id,'student.mark_alumni')))return NextResponse.json({success:false,error:{code:'FORBIDDEN'}},{status:403});try{const {student_id}=await c.params;return NextResponse.json({success:true,data:await markAlumni(student_id,u.id)})}catch(e:unknown){const status=(e as {status?:number})?.status;if(status===422)return NextResponse.json({success:false,error:{code:(e as Error).message}},{status:422});throw e}}
