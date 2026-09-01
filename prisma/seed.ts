@@ -4,16 +4,16 @@ import 'dotenv/config';
 
 const adapter = new PrismaPg({ connectionString: process.env.DIRECT_URL });
 const prisma = new PrismaClient({ adapter });
-const permissions = ['student.view','student.view_sensitive','student.create','student.update','student.promote','student.transfer','student.mark_alumni'];
+const permissions = ['student.view','student.view_sensitive','student.create','student.update','student.promote','student.transfer','student.mark_alumni','academic_year.view','academic_year.manage','class.view','class.manage','subject.view','subject.manage','teacher.view','teacher.manage','schedule.view','schedule.manage','attendance.view','attendance.create','attendance.update','grade.view','grade.create','grade.update','report.academic'];
 
 async function main() {
   await Promise.all(permissions.map((code) => prisma.permission.upsert({ where: { code }, update: {}, create: { code } })));
   const rolePermissions: Record<UserRole, string[]> = {
     SUPER_ADMIN: permissions,
     ADMIN: permissions,
-    ACADEMIC: ['student.view','student.update','student.promote','student.transfer'],
+    ACADEMIC: ['student.view','student.update','student.promote','student.transfer','academic_year.view','academic_year.manage','class.view','class.manage','subject.view','subject.manage','teacher.view','teacher.manage','schedule.view','schedule.manage','attendance.view','attendance.create','attendance.update','grade.view','grade.create','grade.update','report.academic'],
     OPERATOR: ['student.view','student.create','student.update'],
-    TEACHER: ['student.view'],
+    TEACHER: ['student.view','schedule.view','attendance.view','attendance.create','attendance.update','grade.view','grade.create','grade.update'],
     VIEWER: ['student.view'],
   };
   for (const [name, codes] of Object.entries(rolePermissions) as [UserRole, string[]][]) {
@@ -26,4 +26,3 @@ async function main() {
   console.log('RBAC seed completed');
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(() => prisma.$disconnect());
-

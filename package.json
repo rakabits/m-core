@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "postinstall": "prisma generate",
+    "db:migrate:deploy": "prisma migrate deploy",
     "smoke:auth": "tsx scripts/authenticated-smoke.ts"
   },
   "dependencies": {

@@ -8,8 +8,9 @@ const base=process.env.SMOKE_BASE_URL||'https://m-core-red.vercel.app';
 const token=process.env.SMOKE_ACCESS_TOKEN;
 const student=process.env.SMOKE_STUDENT_ID;
 if(!token||!student){console.error('Set SMOKE_BASE_URL, SMOKE_ACCESS_TOKEN, and SMOKE_STUDENT_ID locally.');process.exit(2)}
+const academicYear=process.env.SMOKE_ACADEMIC_YEAR_ID;
 const headers={Authorization:`Bearer ${token}`};
-const paths=['/api/v1/health','/api/v1/programs','/api/v1/students',`/api/v1/students/${encodeURIComponent(student)}/program-history`];
+const paths=['/api/v1/health','/api/v1/programs','/api/v1/students',`/api/v1/students/${encodeURIComponent(student)}/program-history`,...(academicYear?[`/api/v1/academic/academic-years`,`/api/v1/academic/schedules?academicYearId=${encodeURIComponent(academicYear)}`,`/api/v1/academic/dashboard?academicYearId=${encodeURIComponent(academicYear)}`]:[])];
 let failed=false;
 for(const path of paths){const response=await fetch(base+path,{headers});console.log(`${response.status} ${path}`);if(!response.ok)failed=true}
 if(failed){console.error('Authenticated smoke test failed.');process.exit(1)}

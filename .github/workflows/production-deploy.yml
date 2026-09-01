@@ -1,0 +1,79 @@
+﻿name: Production deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_production:
+        description: Type DEPLOY_PRODUCTION to authorize production release
+        required: true
+        type: string
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: 22
+
+jobs:
+  quality:
+    name: Quality gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Prisma generate
+        run: npx prisma generate
+      - name: Prisma validate
+        run: npx prisma validate
+      - name: Type-check
+        run: npm run type-check
+      - name: Lint
+        run: npm run lint
+      - name: Test
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  deploy:
+    name: Migrate and deploy production
+    needs: quality
+    if: github.event_name == 'push' || (github.event.inputs.confirm_production == 'DEPLOY_PRODUCTION' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Prisma generate
+        run: npx prisma generate
+      - name: Apply production migrations
+        run: npx prisma migrate deploy
+        env:
+          DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
+      - name: Deploy to Vercel production
+        run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      - name: Verify production health
+        run: node -e "const u=process.env.PRODUCTION_URL+'/api/v1/health';fetch(u).then(async r=>{if(!r.ok)throw new Error('health check failed: '+r.status);console.log('Production health check passed')})"
+        env:
+          PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}

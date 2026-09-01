@@ -1,0 +1,10 @@
+import { prisma } from '@/core/database/prisma';
+
+export type ScheduleInput={classId:string;subjectId:string;teacherId:string;day:number;startTime:string;endTime:string;room?:string|null};
+export function scheduleMinutes(value:string){const [h,m]=value.split(':').map(Number);return h*60+m}
+export function isValidScheduleInput(input:Pick<ScheduleInput,'day'|'startTime'|'endTime'>){return input.day>=1&&input.day<=7&&scheduleMinutes(input.startTime)<scheduleMinutes(input.endTime)}
+export function intervalsOverlap(start:number,end:number,otherStart:number,otherEnd:number){return start<otherEnd&&end>otherStart}
+function invalid(input:ScheduleInput){return !isValidScheduleInput(input)}
+export async function listSchedules(classId?:string){return prisma.schedule.findMany({where:{status:'ACTIVE',...(classId?{classId}:{})},include:{class:{include:{program:true,academicYear:true}},subject:true,teacher:true},orderBy:[{day:'asc'},{startTime:'asc'}]})}
+export async function saveSchedule(input:ScheduleInput,actorId:string,id?:string){if(invalid(input))throw Object.assign(new Error('INVALID_SCHEDULE_TIME'),{status:422});const candidates=await prisma.schedule.findMany({where:{status:'ACTIVE',day:input.day,OR:[{classId:input.classId},{teacherId:input.teacherId}],...(id?{id:{not:id}}:{})}});const start=scheduleMinutes(input.startTime),end=scheduleMinutes(input.endTime);if(candidates.some(x=>intervalsOverlap(start,end,scheduleMinutes(x.startTime),scheduleMinutes(x.endTime))))throw Object.assign(new Error('SCHEDULE_CONFLICT'),{status:409});const row=id?await prisma.schedule.update({where:{id},data:input}):await prisma.schedule.create({data:input});await prisma.auditLog.create({data:{actorId,action:id?'schedule.update':'schedule.create',resource:'schedule',resourceId:row.id,changes:input}});return row}
+export async function cancelSchedule(id:string,actorId:string){const row=await prisma.schedule.update({where:{id},data:{status:'CANCELLED'}});await prisma.auditLog.create({data:{actorId,action:'schedule.cancel',resource:'schedule',resourceId:id,changes:{status:'CANCELLED'}}});return row}

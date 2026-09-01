@@ -1,5 +1,5 @@
 // =============================================================================
-// M-CORE — Prisma Schema
+// M-CORE â€” Prisma Schema
 // =============================================================================
 //
 // Dokumen ini adalah implementasi DATABASE.md ke dalam Prisma ORM.
@@ -24,12 +24,12 @@ datasource db {
 // =============================================================================
 // ENUM DEFINITIONS
 // Nilai enum harus sinkron dengan src/shared/enums/
-// Referensi: DATABASE.md §8, §9, §16
+// Referensi: DATABASE.md Â§8, Â§9, Â§16
 // =============================================================================
 
 /// Jenis kelamin siswa.
 /// Nilai: male | female
-/// Referensi: DATABASE.md §8
+/// Referensi: DATABASE.md Â§8
 enum Gender {
   male
   female
@@ -39,7 +39,7 @@ enum Gender {
 /// ACTIVE = masih mengikuti program
 /// ALUMNI = telah menyelesaikan perjalanan pendidikan
 /// INACTIVE = tidak sedang aktif, belum alumni
-/// Referensi: DATABASE.md §9, BUSINESS_RULES.md §10-13
+/// Referensi: DATABASE.md Â§9, BUSINESS_RULES.md Â§10-13
 enum StudentStatus {
   active
   alumni
@@ -49,10 +49,10 @@ enum StudentStatus {
 /// Status riwayat program siswa.
 /// ENROLLED = sedang aktif di program ini (program aktif)
 /// COMPLETED = selesai dari program/kelas ini
-/// TRANSFERRED = pindah ke program lain (lihat BUSINESS_RULES.md §22)
+/// TRANSFERRED = pindah ke program lain (lihat BUSINESS_RULES.md Â§22)
 /// DROPPED = berhenti
 /// CANCELLED = dibatalkan administratif
-/// Referensi: DATABASE.md §16, BUSINESS_RULES.md §16-25
+/// Referensi: DATABASE.md Â§16, BUSINESS_RULES.md Â§16-25
 enum ProgramHistoryStatus {
   enrolled
   completed
@@ -67,8 +67,8 @@ enum ProgramHistoryStatus {
 // Tabel master identitas siswa. Satu siswa hanya boleh memiliki satu record.
 // student_id adalah identitas internal M-CORE yang TIDAK BOLEH berubah.
 //
-// PRINSIP UTAMA: ONE STUDENT — ONE IDENTITY
-// Referensi: DATABASE.md §6, §7, BUSINESS_RULES.md §4-5
+// PRINSIP UTAMA: ONE STUDENT â€” ONE IDENTITY
+// Referensi: DATABASE.md Â§6, Â§7, BUSINESS_RULES.md Â§4-5
 // =============================================================================
 model Student {
   /// ID internal M-CORE. UUID, tidak boleh berubah sepanjang lifecycle siswa.
@@ -89,13 +89,13 @@ model Student {
 
   /// Nomor Induk Kependudukan (16 digit).
   /// UNIQUE jika tersedia, NULL jika belum ada.
-  /// JANGAN simpan sebagai integer — NIK bisa memiliki leading zero.
-  /// Referensi: DATABASE.md §10, BUSINESS_RULES.md §6-7
+  /// JANGAN simpan sebagai integer â€” NIK bisa memiliki leading zero.
+  /// Referensi: DATABASE.md Â§10, BUSINESS_RULES.md Â§6-7
   nik String? @db.VarChar(16)
 
   /// Email siswa. UNIQUE (case-insensitive) jika tersedia.
   /// Perbandingan email harus case-insensitive (lihat index di bawah).
-  /// Referensi: DATABASE.md §11
+  /// Referensi: DATABASE.md Â§11
   email String? @db.VarChar(150)
 
   /// Nomor HP utama. Opsional.
@@ -116,10 +116,13 @@ model Student {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   programHistories StudentProgramHistory[]
+  classEnrollments ClassEnrollment[]
+  attendanceRecords AttendanceRecord[]
+  grades Grade[]
   userProfile      UserProfile?
 
   // Indeks untuk performa query.
-  // Referensi: DATABASE.md §22
+  // Referensi: DATABASE.md Â§22
   @@index([fullName])
   @@index([status])
   @@index([birthDate])
@@ -134,7 +137,7 @@ model Student {
 //
 // Program yang sudah tidak digunakan TIDAK boleh dihapus.
 // Gunakan isActive = false untuk menonaktifkan.
-// Referensi: DATABASE.md §12-14
+// Referensi: DATABASE.md Â§12-14
 // =============================================================================
 model Program {
   /// ID internal program.
@@ -162,8 +165,8 @@ model Program {
   /// Timestamp diperbarui.
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  // Relasi
   programHistories StudentProgramHistory[]
+  academicClasses  AcademicClass[]
   scopeAssignments ScopeAssignment[]
 
   // Indeks untuk performa query.
@@ -185,7 +188,7 @@ model Program {
 //   2. Record baru dibuat untuk program/kelas berikutnya
 //   JANGAN overwrite record lama dengan data baru.
 //
-// Referensi: DATABASE.md §15-18, BUSINESS_RULES.md §16-25
+// Referensi: DATABASE.md Â§15-18, BUSINESS_RULES.md Â§16-25
 // =============================================================================
 model StudentProgramHistory {
   /// ID riwayat. UUID, primary key.
@@ -201,7 +204,7 @@ model StudentProgramHistory {
 
   /// Tahun akademik. Format: YYYY/YYYY. Contoh: "2024/2025", "2025/2026".
   /// Validasi format dilakukan di application layer dengan Zod.
-  /// Referensi: DATABASE.md §17
+  /// Referensi: DATABASE.md Â§17
   academicYear String @map("academic_year") @db.VarChar(9)
 
   /// Level/jenjang dalam program. Opsional karena tidak semua program pakai sistem ini.
@@ -236,10 +239,11 @@ model StudentProgramHistory {
   // Relasi
   student Student @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   program Program @relation(fields: [programId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  classEnrollment ClassEnrollment?
 
   // Unique constraint: satu siswa tidak boleh memiliki duplikasi history
   // untuk program dan tahun akademik yang sama.
-  // Referensi: DATABASE.md §21
+  // Referensi: DATABASE.md Â§21
   @@unique([studentId, programId, academicYear], name: "uq_student_program_year")
   // Indeks untuk performa query.
   @@index([studentId])
@@ -275,6 +279,7 @@ model UserProfile {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   student   Student?             @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  teacher   Teacher?
   roles     UserRoleAssignment[]
   scopes    ScopeAssignment[]
   auditLogs AuditLog[]
@@ -355,4 +360,164 @@ model AuditLog {
   @@index([resource, resourceId])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// =============================================================================
+// PHASE 5: ACADEMIC STRUCTURE
+// Each class belongs to exactly one program and one academic year.
+// =============================================================================
+model AcademicYear {
+  id        String   @id @default(uuid()) @map("academic_year_id")
+  code      String   @unique @db.VarChar(9)
+  label     String   @db.VarChar(100)
+  startDate DateTime @map("start_date") @db.Date
+  endDate   DateTime @map("end_date") @db.Date
+  isActive  Boolean  @default(false) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  classes   AcademicClass[]
+  @@index([isActive])
+  @@map("academic_years")
+}
+
+model AcademicClass {
+  id             String       @id @default(uuid()) @map("class_id")
+  programId      String       @map("program_id")
+  academicYearId String       @map("academic_year_id")
+  code           String       @db.VarChar(50)
+  name           String       @db.VarChar(100)
+  capacity       Int?
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+  program        Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
+  academicYear  AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  teachers       Teacher[]
+  enrollments    ClassEnrollment[]
+  schedules      Schedule[]
+  attendanceSessions AttendanceSession[]
+  grades         Grade[]
+  @@unique([academicYearId, programId, code], name: "uq_academic_class_context")
+  @@index([programId])
+  @@index([academicYearId])
+  @@map("academic_classes")
+}
+
+model Subject {
+  id          String   @id @default(uuid()) @map("subject_id")
+  code        String   @unique @db.VarChar(50)
+  name        String   @db.VarChar(150)
+  description String?  @db.VarChar(500)
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  @@index([name])
+  @@index([isActive])
+  schedules Schedule[]
+  grades Grade[]
+  @@map("subjects")
+}
+
+model Teacher {
+  id           String        @id @default(uuid()) @map("teacher_id")
+  userProfileId String?       @unique @map("user_id")
+  employeeCode String?       @unique @map("employee_code") @db.VarChar(50)
+  displayName  String        @map("display_name") @db.VarChar(150)
+  isActive     Boolean       @default(true) @map("is_active")
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+  userProfile  UserProfile?  @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
+  classes      AcademicClass[]
+  schedules    Schedule[]
+  @@index([displayName])
+  @@index([isActive])
+  @@map("teachers")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  SICK
+  PERMISSION
+}
+
+enum AcademicRecordStatus {
+  ACTIVE
+  CANCELLED
+}
+
+model ClassEnrollment {
+  id        String @id @default(uuid()) @map("class_enrollment_id")
+  historyId String @unique @map("history_id")
+  classId   String @map("class_id")
+  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz()
+  endedAt   DateTime? @map("ended_at") @db.Timestamptz()
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  studentId String @map("student_id")
+  history   StudentProgramHistory @relation(fields: [historyId], references: [id], onDelete: Restrict)
+  class     AcademicClass @relation(fields: [classId], references: [id], onDelete: Restrict)
+  @@index([classId])
+  @@map("class_enrollments")
+}
+
+model Schedule {
+  id String @id @default(uuid()) @map("schedule_id")
+  classId String @map("class_id")
+  subjectId String @map("subject_id")
+  teacherId String @map("teacher_id")
+  day Int
+  startTime String @map("start_time") @db.VarChar(5)
+  endTime String @map("end_time") @db.VarChar(5)
+  room String? @db.VarChar(100)
+  status AcademicRecordStatus @default(ACTIVE)
+  class AcademicClass @relation(fields: [classId], references: [id], onDelete: Restrict)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  attendanceSessions AttendanceSession[]
+  @@index([classId, day])
+  @@index([teacherId, day])
+  @@map("schedules")
+}
+
+model AttendanceSession {
+  id String @id @default(uuid()) @map("attendance_session_id")
+  classId String @map("class_id")
+  scheduleId String? @map("schedule_id")
+  sessionDate DateTime @map("session_date") @db.Date
+  topic String? @db.VarChar(255)
+  createdBy String @map("created_by")
+  class AcademicClass @relation(fields: [classId], references: [id], onDelete: Restrict)
+  schedule Schedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  records AttendanceRecord[]
+  @@unique([classId, sessionDate])
+  @@map("attendance_sessions")
+}
+
+model AttendanceRecord {
+  id String @id @default(uuid()) @map("attendance_record_id")
+  sessionId String @map("session_id")
+  studentId String @map("student_id")
+  status AttendanceStatus
+  notes String? @db.VarChar(255)
+  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  @@unique([sessionId, studentId])
+  @@map("attendance_records")
+}
+
+model Grade {
+  id String @id @default(uuid()) @map("grade_id")
+  studentId String @map("student_id")
+  classId String @map("class_id")
+  subjectId String @map("subject_id")
+  assessmentKey String @map("assessment_key") @db.VarChar(80)
+  score Decimal @db.Decimal(5,2)
+  letterGrade String? @map("letter_grade") @db.VarChar(3)
+  notes String? @db.VarChar(255)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  class AcademicClass @relation(fields: [classId], references: [id], onDelete: Restrict)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  @@unique([studentId, classId, subjectId, assessmentKey])
+  @@index([classId, subjectId])
+  @@map("grades")
 }
