@@ -1,4 +1,4 @@
-﻿name: Production deploy
+name: Production deploy
 
 on:
   workflow_dispatch:
@@ -74,6 +74,7 @@ jobs:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       - name: Verify production health
-        run: node -e "const u=process.env.PRODUCTION_URL+'/api/v1/health';fetch(u).then(async r=>{if(!r.ok)throw new Error('health check failed: '+r.status);console.log('Production health check passed')})"
+        run: |
+          node -e "const u=process.env.PRODUCTION_URL+'/api/v1/health';fetch(u).then(async r=>{if(!r.ok)throw new Error('health check failed: '+r.status);console.log('Production health check passed')})"
         env:
           PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
