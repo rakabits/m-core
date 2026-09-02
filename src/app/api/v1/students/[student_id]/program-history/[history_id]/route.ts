@@ -1,7 +1,0 @@
-﻿import { NextRequest,NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { hasPermission } from '@/modules/rbac/authorization';
-import { historyUpdateSchema } from '@/modules/program-history/validation';
-import { updateHistory } from '@/modules/program-history/service';
-async function user(){const s=await createSupabaseServerClient();return (await s.auth.getUser()).data.user}
-export async function PATCH(r:NextRequest,c:{params:Promise<{student_id:string;history_id:string}>}){const u=await user();if(!u)return NextResponse.json({success:false,error:{code:'UNAUTHORIZED'}},{status:401});if(!(await hasPermission(u.id,'program_history.update')))return NextResponse.json({success:false,error:{code:'FORBIDDEN'}},{status:403});const p=historyUpdateSchema.safeParse(await r.json());if(!p.success)return NextResponse.json({success:false,error:{code:'VALIDATION_ERROR'}},{status:422});try{const {student_id,history_id}=await c.params;const data=await updateHistory(student_id,history_id,p.data,u.id);if(!data)return NextResponse.json({success:false,error:{code:'NOT_FOUND'}},{status:404});return NextResponse.json({success:true,data})}catch(e:unknown){const status=(e as {status?:number})?.status;if(status===422)return NextResponse.json({success:false,error:{code:(e as Error).message}},{status:422});throw e}}

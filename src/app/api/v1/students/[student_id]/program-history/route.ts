@@ -1,8 +1,0 @@
-import { NextRequest,NextResponse } from 'next/server';
-import { createSupabaseServerClient } from '@/lib/supabase/server';
-import { hasPermission } from '@/modules/rbac/authorization';
-import { historyCreateSchema } from '@/modules/program-history/validation';
-import { createHistory,listHistory } from '@/modules/program-history/service';
-async function user(){const s=await createSupabaseServerClient();return (await s.auth.getUser()).data.user}
-export async function GET(_:NextRequest,c:{params:Promise<{student_id:string}>}){const u=await user();if(!u)return NextResponse.json({success:false,error:{code:'UNAUTHORIZED'}},{status:401});if(!(await hasPermission(u.id,'program_history.view')))return NextResponse.json({success:false,error:{code:'FORBIDDEN'}},{status:403});const {student_id}=await c.params;return NextResponse.json({success:true,data:await listHistory(student_id)})}
-export async function POST(r:NextRequest,c:{params:Promise<{student_id:string}>}){const u=await user();if(!u)return NextResponse.json({success:false,error:{code:'UNAUTHORIZED'}},{status:401});if(!(await hasPermission(u.id,'program_history.create')))return NextResponse.json({success:false,error:{code:'FORBIDDEN'}},{status:403});const p=historyCreateSchema.safeParse(await r.json());if(!p.success)return NextResponse.json({success:false,error:{code:'VALIDATION_ERROR'}},{status:422});try{const {student_id}=await c.params;return NextResponse.json({success:true,data:await createHistory(student_id,p.data,u.id)},{status:201})}catch(e:unknown){const error=e instanceof Error?e:null;const status=(e as {status?:number})?.status;if(status===409)return NextResponse.json({success:false,error:{code:error?.message??'DUPLICATE_ENROLLMENT'}},{status:409});throw e}}

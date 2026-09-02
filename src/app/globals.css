@@ -66,3 +66,31 @@ main .student-toolbar input{width:min(100%,680px)}
 main .form-grid input,main .form-grid select,main .form-grid textarea{width:100%}
 main .form-actions{display:flex;justify-content:flex-end;gap:12px}
 @media(max-width:720px){main .section-heading>select,main .students-header>label,main .toolbar>select,main .student-toolbar label,main .student-toolbar input{width:100%}main .toolbar>form{max-width:none}main .form-actions{flex-wrap:wrap}}
+
+/* Compact field density */
+main input,main select,.login-page input,.login-page select{min-height:40px;padding-left:13px;padding-right:13px;border-radius:9px!important}
+main textarea,.login-page textarea{min-height:84px;padding:10px 13px;border-radius:9px!important}
+@media(max-width:720px){main input,main select,.login-page input,.login-page select{min-height:42px}}
+
+/* Student directory reference layout */
+.students-page{max-width:1400px;margin:0 auto;padding:32px 36px 48px;background:#F8FAFB;min-height:calc(100vh - 54px)}
+.directory-header{align-items:flex-start;margin-bottom:28px}.directory-header h1{font-size:28px;letter-spacing:-.5px}.directory-search{align-items:center;margin-bottom:24px}.directory-search form{display:flex;align-items:center;gap:10px;flex:1;max-width:820px}.search-field,.filter-field{position:relative;display:flex;align-items:center}.search-field{flex:1}.search-field input{padding-left:40px!important}.students-icon{position:absolute;left:14px;width:16px;height:16px;color:#94A3B8;pointer-events:none}.filter-field{width:180px}.filter-field select{appearance:none;padding-right:34px!important;width:100%}.students-chevron{position:absolute;right:12px;width:14px;height:14px;color:#94A3B8;pointer-events:none}.directory-card{border-radius:14px;padding:0;overflow:hidden}.directory-card>.card-heading{padding:20px 20px 14px}.directory-list{border-top:1px solid #EEF2F7}.directory-row{min-height:68px;padding:12px 20px;gap:16px}.directory-row:hover{background:#FAFCFC}.directory-row .student-info{flex:1}.directory-row .student-info span{font-size:11px;color:#94A3B8}.directory-detail{display:inline-flex;align-items:center;gap:5px}.students-arrow{width:14px;height:14px}.directory-card .pagination{padding:14px 20px 18px;border-top:1px solid #EEF2F7}
+@media(max-width:720px){.students-page{padding:22px 16px 36px}.directory-header{gap:18px;flex-direction:column}.directory-header .create-student-button{align-self:flex-start}.directory-search{flex-direction:column;align-items:stretch}.directory-search form{max-width:none}.filter-field{width:100%}.directory-row{align-items:flex-start;flex-wrap:wrap}.directory-row .student-info{min-width:calc(100% - 56px)}.directory-row .status{margin-left:56px}.directory-detail{margin-left:auto}.directory-card .pagination{gap:8px;padding-left:14px;padding-right:14px}}
+
+/* Student Management sidebar group */
+.nav-group{margin:1px 8px}.nav-group-title{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:9px;color:#5A6A7E;font-size:13px;font-weight:600}.nav-group.active-group>.nav-group-title{background:#DFF6F4;color:#0A6B66}.nav-submenu{display:grid;gap:2px;margin:3px 0 6px 38px;padding-left:12px;border-left:1px solid #D7E8E8}.nav-submenu a{display:block;padding:7px 8px;border-radius:7px;color:#7B8A9D;font-size:11.5px;font-weight:500;text-decoration:none;line-height:1.25}.nav-submenu a:hover{background:#F1F5F9;color:#0F1923}.nav-submenu a.active{background:#E8F8F6;color:#0A6B66;font-weight:700}.nav-group .nav-icon{width:20px;text-align:center;font-size:16px}
+
+/* Collapsible Student Management navigation */
+.nav-group-title{width:100%;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer}.nav-group-indicator{width:7px;height:7px;margin-left:auto;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);transition:transform .18s ease}.nav-group-indicator.is-open{transform:rotate(225deg);margin-top:5px}.nav-submenu{display:grid;grid-template-rows:0fr;opacity:0;overflow:hidden;transition:grid-template-rows .2s ease,opacity .2s ease;margin-top:0;margin-bottom:0}.nav-submenu>*{min-height:0}.nav-submenu.is-open{grid-template-rows:1fr;opacity:1;margin-top:3px;margin-bottom:6px}
+
+/* Unified sidebar typography and spacing */
+.admin-sidebar{font-family:var(--font-geist-sans),system-ui,sans-serif}.side-nav{display:flex;flex-direction:column;gap:6px}.side-nav>a,.nav-group-title{min-height:42px;padding:0 12px;box-sizing:border-box;display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.2;font-weight:600;letter-spacing:0}.side-nav>a{margin:0 8px;width:calc(100% - 16px)}.side-nav .nav-icon,.nav-group-title .nav-icon{width:20px;min-width:20px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1}.nav-group{margin:0 8px}.nav-group-title{width:100%;margin:0;color:#5A6A7E}.nav-group-title>span:nth-child(2){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.nav-submenu{margin-left:30px!important;padding-left:14px!important;gap:2px}.nav-submenu a{font-size:12px;line-height:1.25;padding:8px 10px}.nav-group.active-group>.nav-group-title{color:#0A6B66}.nav-label{margin-bottom:8px!important}.side-nav>a.active,.nav-group.active-group>.nav-group-title{background:#DFF6F4}
+
+/* Tighten navigation group spacing */
+.side-nav{gap:2px}.nav-group{margin-bottom:0}.nav-submenu.is-open{margin-bottom:2px}.nav-group + .side-nav > a{margin-top:0}
+
+/* Remove residual gap below Student Management */
+.side-nav{row-gap:0!important;gap:0!important}.nav-group{margin:0!important;padding:0!important}.nav-group + a{margin-top:0!important}.nav-submenu:not(.is-open){margin:0!important}.nav-submenu.is-open{margin-top:0!important;margin-bottom:0!important}
+
+/* Fully collapse hidden Student Management submenu */
+.nav-submenu:not(.is-open){display:none!important;height:0!important;min-height:0!important;visibility:hidden!important;opacity:0!important;margin:0!important;padding:0!important;border:0!important}.nav-submenu.is-open{display:grid!important;height:auto!important;visibility:visible!important;opacity:1!important}
