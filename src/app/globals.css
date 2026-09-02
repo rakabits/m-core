@@ -46,3 +46,11 @@ table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(
 #save-student-button.save-student-button{background:#18A89B!important;border:1px solid #18A89B!important;color:#FFFFFF!important;min-height:42px;font-weight:800!important;box-shadow:0 6px 14px rgba(24,168,155,.24)!important}
 #save-student-button.save-student-button:hover{background:#12877D!important;border-color:#12877D!important;color:#FFFFFF!important}
 #save-student-button.save-student-button:disabled{background:#86CFC7!important;border-color:#86CFC7!important;color:#FFFFFF!important;opacity:1!important}
+
+/* Unified dashboard-style form fields */
+:root{--field-border:#CBD5E1;--field-border-hover:#94A3B8;--field-focus:#18A89B;--field-ring:rgba(24,168,155,.18)}
+main input,main select,main textarea,.login-page input,.login-page select,.login-page textarea{box-sizing:border-box;width:100%;min-height:48px;padding:0 16px;border:1px solid var(--field-border)!important;border-radius:10px!important;background:#fff!important;color:var(--ink)!important;font:inherit;transition:border-color .2s ease,box-shadow .2s ease,background .2s ease}
+main input:hover,main select:hover,main textarea:hover,.login-page input:hover,.login-page select:hover,.login-page textarea:hover{border-color:var(--field-border-hover)!important}
+main input:focus,main select:focus,main textarea:focus,.login-page input:focus,.login-page select:focus,.login-page textarea:focus{border-color:var(--field-focus)!important;box-shadow:0 0 0 3px var(--field-ring)!important;outline:0!important}
+main textarea,.login-page textarea{min-height:96px;padding-top:12px;padding-bottom:12px;resize:vertical}
+main input:disabled,main select:disabled,main textarea:disabled,.login-page input:disabled,.login-page select:disabled,.login-page textarea:disabled{background:#F8FAFC!important;border-color:var(--field-border)!important;color:var(--muted)!important;opacity:1}
