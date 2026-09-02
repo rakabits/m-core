@@ -5,9 +5,10 @@ import { StudentCreateInput, StudentUpdateInput } from './validation';
 import type { ScopeInput } from '@/modules/rbac/authorization';
 import { studentScopeWhere } from './scope';
 
-const baseSelect = { id: true, studentNumber: true, fullName: true, gender: true, birthPlace: true, birthDate: true, status: true, email: true, nik: true, phone: true, whatsapp: true, createdAt: true, updatedAt: true } as const;
+const baseSelect = { id: true, studentNumber: true, photoUrl: true, photoPublicId: true, fullName: true, gender: true, birthPlace: true, birthDate: true, status: true, email: true, nik: true, phone: true, whatsapp: true, createdAt: true, updatedAt: true, programHistories: { where: { status: 'enrolled' }, include: { program: { select: { id: true, programName: true } } }, orderBy: { createdAt: 'desc' }, take: 1 } } as const;
 export function presentStudent(student: any, sensitive = false) {
-  const data: any = { student_id: student.id, student_number: String(student.studentNumber).padStart(5, '0'), full_name: student.fullName, gender: student.gender, birth_place: student.birthPlace, status: student.status, created_at: student.createdAt, updated_at: student.updatedAt };
+  const activeHistory = student.programHistories?.[0];
+  const data: any = { student_id: student.id, student_number: String(student.studentNumber).padStart(5, '0'), photo_url: student.photoUrl, full_name: student.fullName, gender: student.gender, birth_place: student.birthPlace, status: student.status, active_program: activeHistory ? { program_id: activeHistory.program.id, program_name: activeHistory.program.programName, academic_year: activeHistory.academicYear, class_name: activeHistory.className } : null, created_at: student.createdAt, updated_at: student.updatedAt };
   if (sensitive) Object.assign(data, { birth_date: student.birthDate, nik: student.nik, email: student.email, phone: student.phone, whatsapp: student.whatsapp });
   return data;
 }
@@ -17,7 +18,7 @@ export async function listStudents(params: { page: number; perPage: number; sear
   if (params.status) where.status = params.status;
   if (params.gender) where.gender = params.gender;
   if (params.search) where.OR = [{ fullName: { contains: params.search, mode: Prisma.QueryMode.insensitive } }, ...(params.sensitive ? [{ nik: { contains: params.search } }, { email: { contains: params.search, mode: Prisma.QueryMode.insensitive } }, { phone: { contains: params.search } }] : [])];
-  const [rows, total] = await prisma.$transaction([prisma.student.findMany({ where, select: baseSelect, orderBy: { fullName: 'asc' }, skip: (params.page - 1) * params.perPage, take: params.perPage }), prisma.student.count({ where })]);
+  const [rows, total] = await prisma.$transaction([prisma.student.findMany({ where, select: baseSelect, orderBy: { studentNumber: 'asc' }, skip: (params.page - 1) * params.perPage, take: params.perPage }), prisma.student.count({ where })]);
   return { data: rows.map((row) => presentStudent(row, params.sensitive)), meta: { page: params.page, per_page: params.perPage, total, total_pages: Math.ceil(total / params.perPage) } };
 }
 export async function createStudent(input: StudentCreateInput, actorId?: string) {

@@ -75,9 +75,14 @@ model Student {
   /// Jangan pernah menggunakan NIK, email, atau nomor HP sebagai student_id.
   id String @id @default(uuid()) @map("student_id")
 
-  /// Nomor Student ID publik berurutan, ditampilkan dengan padding lima digit.
-  /// UUID internal tetap menjadi primary key dan foreign key seluruh modul.
   studentNumber Int @unique @default(autoincrement()) @map("student_number")
+
+  /// URL publik foto profil siswa yang disimpan di Cloudinary.
+  photoUrl String? @map("photo_url") @db.VarChar(500)
+
+  /// Public ID asset Cloudinary untuk penggantian dan penghapusan foto.
+  photoPublicId String? @map("photo_public_id") @db.VarChar(255)
+
 
   /// Nama lengkap siswa. Required.
   fullName String @map("full_name") @db.VarChar(150)
@@ -95,7 +100,7 @@ model Student {
   /// UNIQUE jika tersedia, NULL jika belum ada.
   /// JANGAN simpan sebagai integer â€” NIK bisa memiliki leading zero.
   /// Referensi: DATABASE.md Â§10, BUSINESS_RULES.md Â§6-7
-  nik String? @db.VarChar(16)
+  nik String? @unique @db.VarChar(16)
 
   /// Email siswa. UNIQUE (case-insensitive) jika tersedia.
   /// Perbandingan email harus case-insensitive (lihat index di bawah).

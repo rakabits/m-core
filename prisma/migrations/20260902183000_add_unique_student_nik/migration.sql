@@ -1,0 +1,1 @@
+-- Prevent duplicate NIK values while allowing multiple NULL values.`nCREATE UNIQUE INDEX "students_nik_key" ON "students"("nik");`n
