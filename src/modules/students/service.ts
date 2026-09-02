@@ -1,13 +1,13 @@
-﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma, StudentStatus } from '@prisma/client';
 import { prisma } from '@/core/database/prisma';
 import { StudentCreateInput, StudentUpdateInput } from './validation';
 import type { ScopeInput } from '@/modules/rbac/authorization';
 import { studentScopeWhere } from './scope';
 
-const baseSelect = { id: true, fullName: true, gender: true, birthPlace: true, birthDate: true, status: true, email: true, nik: true, phone: true, whatsapp: true, createdAt: true, updatedAt: true } as const;
+const baseSelect = { id: true, studentNumber: true, fullName: true, gender: true, birthPlace: true, birthDate: true, status: true, email: true, nik: true, phone: true, whatsapp: true, createdAt: true, updatedAt: true } as const;
 export function presentStudent(student: any, sensitive = false) {
-  const data: any = { student_id: student.id, full_name: student.fullName, gender: student.gender, birth_place: student.birthPlace, status: student.status, created_at: student.createdAt, updated_at: student.updatedAt };
+  const data: any = { student_id: student.id, student_number: String(student.studentNumber).padStart(5, '0'), full_name: student.fullName, gender: student.gender, birth_place: student.birthPlace, status: student.status, created_at: student.createdAt, updated_at: student.updatedAt };
   if (sensitive) Object.assign(data, { birth_date: student.birthDate, nik: student.nik, email: student.email, phone: student.phone, whatsapp: student.whatsapp });
   return data;
 }
@@ -24,10 +24,11 @@ export async function createStudent(input: StudentCreateInput, actorId?: string)
   try {
     return await prisma.$transaction(async (tx) => {
       const student = await tx.student.create({ data: { fullName: input.fullName, gender: input.gender, birthPlace: input.birthPlace ?? null, birthDate: input.birthDate ?? null, nik: input.nik ?? null, email: input.email?.toLowerCase() ?? null, phone: input.phone ?? null, whatsapp: input.whatsapp ?? null, status: input.status as StudentStatus }, select: baseSelect });
-      await tx.auditLog.create({ data: { actorId, action: 'student.create', resource: 'student', resourceId: student.id, changes: { created: { fullName: student.fullName, status: student.status } } } });
+      const profile = actorId ? await tx.userProfile.findUnique({ where: { authId: actorId }, select: { id: true } }) : null;
+      await tx.auditLog.create({ data: { actorId: profile?.id ?? null, action: 'student.create', resource: 'student', resourceId: student.id, changes: { created: { fullName: student.fullName, status: student.status } } } });
       return student;
     });
-  } catch (error: any) { if (error?.code === 'P2002' && error?.meta?.target?.includes('nik')) { const conflict = new Error('DUPLICATE_NIK'); (conflict as any).status = 409; throw conflict; } throw error; }
+  } catch (error: any) { if (error?.code === 'P2002') { const target = Array.isArray(error?.meta?.target) ? error.meta.target.join(',') : String(error?.meta?.target ?? ''); const conflict = new Error(target.includes('email') ? 'DUPLICATE_EMAIL' : 'DUPLICATE_NIK'); (conflict as any).status = 409; throw conflict; } if (error?.code === 'P2003') { const conflict = new Error('DATABASE_REFERENCE_ERROR'); (conflict as any).status = 422; throw conflict; } throw error; }
 }
 
 export async function getStudent(id: string, sensitive = false) {
@@ -41,7 +42,7 @@ export async function updateStudent(id: string, input: StudentUpdateInput, actor
   const current = await prisma.student.findUnique({ where: { id }, select: { status: true } });
   if (!current) return null;
   if (input.status && input.status !== current.status && !allowedTransitions[current.status].includes(input.status as StudentStatus)) { const error = new Error('INVALID_STATUS_TRANSITION'); (error as any).status = 422; throw error; }
-  try { return await prisma.$transaction(async (tx) => { const student = await tx.student.update({ where: { id }, data: { ...input, email: input.email === undefined ? undefined : input.email?.toLowerCase() ?? null, status: input.status as StudentStatus | undefined }, select: baseSelect }); await tx.auditLog.create({ data: { actorId, action: 'student.update', resource: 'student', resourceId: id, changes: input } }); return student; }); } catch (error: any) { if (error?.code === 'P2002' && error?.meta?.target?.includes('nik')) { const conflict = new Error('DUPLICATE_NIK'); (conflict as any).status = 409; throw conflict; } throw error; }
+  try { return await prisma.$transaction(async (tx) => { const student = await tx.student.update({ where: { id }, data: { ...input, email: input.email === undefined ? undefined : input.email?.toLowerCase() ?? null, status: input.status as StudentStatus | undefined }, select: baseSelect }); const profile = await tx.userProfile.findUnique({ where: { authId: actorId }, select: { id: true } }); await tx.auditLog.create({ data: { actorId: profile?.id ?? null, action: 'student.update', resource: 'student', resourceId: id, changes: input } }); return student; }); } catch (error: any) { if (error?.code === 'P2002') { const target = Array.isArray(error?.meta?.target) ? error.meta.target.join(',') : String(error?.meta?.target ?? ''); const conflict = new Error(target.includes('email') ? 'DUPLICATE_EMAIL' : 'DUPLICATE_NIK'); (conflict as any).status = 409; throw conflict; } if (error?.code === 'P2003') { const conflict = new Error('DATABASE_REFERENCE_ERROR'); (conflict as any).status = 422; throw conflict; } if (error?.code === 'P2025') { const missing = new Error('NOT_FOUND'); (missing as any).status = 404; throw missing; } throw error; }
 }
 
 
