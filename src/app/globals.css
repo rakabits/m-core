@@ -54,3 +54,15 @@ main input:hover,main select:hover,main textarea:hover,.login-page input:hover,.
 main input:focus,main select:focus,main textarea:focus,.login-page input:focus,.login-page select:focus,.login-page textarea:focus{border-color:var(--field-focus)!important;box-shadow:0 0 0 3px var(--field-ring)!important;outline:0!important}
 main textarea,.login-page textarea{min-height:96px;padding-top:12px;padding-bottom:12px;resize:vertical}
 main input:disabled,main select:disabled,main textarea:disabled,.login-page input:disabled,.login-page select:disabled,.login-page textarea:disabled{background:#F8FAFC!important;border-color:var(--field-border)!important;color:var(--muted)!important;opacity:1}
+
+/* Restore contextual field widths */
+main .section-heading>select{width:clamp(280px,42vw,520px)}
+main .students-header>label{width:min(100%,360px)}
+main .toolbar>form{display:flex;align-items:center;gap:10px;flex:1;max-width:760px}
+main .toolbar>form input{flex:1}
+main .toolbar>select{width:min(100%,260px)}
+main .student-toolbar label{width:min(100%,680px)}
+main .student-toolbar input{width:min(100%,680px)}
+main .form-grid input,main .form-grid select,main .form-grid textarea{width:100%}
+main .form-actions{display:flex;justify-content:flex-end;gap:12px}
+@media(max-width:720px){main .section-heading>select,main .students-header>label,main .toolbar>select,main .student-toolbar label,main .student-toolbar input{width:100%}main .toolbar>form{max-width:none}main .form-actions{flex-wrap:wrap}}
