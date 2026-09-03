@@ -6,5 +6,5 @@ import "./globals.css";
 
 const geistSans=Geist({variable:"--font-geist-sans",subsets:["latin"]});
 const geistMono=Geist_Mono({variable:"--font-geist-mono",subsets:["latin"]});
-export const metadata:Metadata={title:"M-CORE | Education Management",description:"Central Student & Education Management System"};
+export const metadata:Metadata={title:"M-CORE | Central Student & Education Management System",description:"M-CORE (MUMTAZA CORE) adalah sistem manajemen terpadu untuk data siswa, program pendidikan, dan informasi akademik."};
 export default function RootLayout({children}:{children:ReactNode}){return <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}><body>{children}</body></html>}
