@@ -83,7 +83,6 @@ model Student {
   /// Public ID asset Cloudinary untuk penggantian dan penghapusan foto.
   photoPublicId String? @map("photo_public_id") @db.VarChar(255)
 
-
   /// Nama lengkap siswa. Required.
   fullName String @map("full_name") @db.VarChar(150)
 
@@ -124,11 +123,13 @@ model Student {
   /// Timestamp diperbarui. Harus diupdate setiap kali record berubah.
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  programHistories StudentProgramHistory[]
-  classEnrollments ClassEnrollment[]
+  programHistories  StudentProgramHistory[]
+  classEnrollments  ClassEnrollment[]
   attendanceRecords AttendanceRecord[]
-  grades Grade[]
-  userProfile      UserProfile?
+  grades            Grade[]
+  userProfile       UserProfile?
+  parents           StudentParent[]
+  guardianConfig    StudentGuardian?
 
   // Indeks untuk performa query.
   // Referensi: DATABASE.md Â§22
@@ -136,6 +137,54 @@ model Student {
   @@index([status])
   @@index([birthDate])
   @@map("students")
+}
+
+enum ParentRole {
+  father
+  mother
+  other
+}
+
+enum GuardianSource {
+  father
+  mother
+  other
+}
+
+model StudentParent {
+  id              String            @id @default(uuid()) @map("parent_id")
+  studentId       String            @map("student_id")
+  role            ParentRole
+  fullName        String            @map("full_name") @db.VarChar(150)
+  nik             String?           @db.VarChar(16)
+  phone           String?           @db.VarChar(20)
+  education       String?           @db.VarChar(100)
+  educationOther  String?           @map("education_other") @db.VarChar(100)
+  occupation      String?           @db.VarChar(100)
+  occupationOther String?           @map("occupation_other") @db.VarChar(100)
+  monthlyIncome   Int?              @map("monthly_income")
+  relationship    String?           @db.VarChar(100)
+  createdAt       DateTime          @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime          @updatedAt @map("updated_at") @db.Timestamptz()
+  student         Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  guardianLinks   StudentGuardian[] @relation("OtherParent")
+
+  @@unique([studentId, role])
+  @@index([studentId])
+  @@map("student_parents")
+}
+
+model StudentGuardian {
+  id                  String         @id @default(uuid()) @map("guardian_id")
+  studentId           String         @unique @map("student_id")
+  guardianIsDifferent Boolean        @default(false) @map("guardian_is_different")
+  guardianSource      GuardianSource @default(father) @map("guardian_source")
+  otherParentId       String?        @map("other_parent_id")
+  student             Student        @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  otherParent         StudentParent? @relation("OtherParent", fields: [otherParentId], references: [id], onDelete: SetNull)
+
+  @@index([otherParentId])
+  @@map("student_guardians")
 }
 
 // =============================================================================
@@ -246,8 +295,8 @@ model StudentProgramHistory {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relasi
-  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  program Program @relation(fields: [programId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  student         Student          @relation(fields: [studentId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  program         Program          @relation(fields: [programId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   classEnrollment ClassEnrollment?
 
   // Unique constraint: satu siswa tidak boleh memiliki duplikasi history
@@ -376,36 +425,38 @@ model AuditLog {
 // Each class belongs to exactly one program and one academic year.
 // =============================================================================
 model AcademicYear {
-  id        String   @id @default(uuid()) @map("academic_year_id")
-  code      String   @unique @db.VarChar(9)
-  label     String   @db.VarChar(100)
-  startDate DateTime @map("start_date") @db.Date
-  endDate   DateTime @map("end_date") @db.Date
-  isActive  Boolean  @default(false) @map("is_active")
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  id        String          @id @default(uuid()) @map("academic_year_id")
+  code      String          @unique @db.VarChar(9)
+  label     String          @db.VarChar(100)
+  startDate DateTime        @map("start_date") @db.Date
+  endDate   DateTime        @map("end_date") @db.Date
+  isActive  Boolean         @default(false) @map("is_active")
+  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
   classes   AcademicClass[]
+
   @@index([isActive])
   @@map("academic_years")
 }
 
 model AcademicClass {
-  id             String       @id @default(uuid()) @map("class_id")
-  programId      String       @map("program_id")
-  academicYearId String       @map("academic_year_id")
-  code           String       @db.VarChar(50)
-  name           String       @db.VarChar(100)
-  capacity       Int?
-  isActive       Boolean      @default(true) @map("is_active")
-  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
-  program        Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
-  academicYear  AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
-  teachers       Teacher[]
-  enrollments    ClassEnrollment[]
-  schedules      Schedule[]
+  id                 String              @id @default(uuid()) @map("class_id")
+  programId          String              @map("program_id")
+  academicYearId     String              @map("academic_year_id")
+  code               String              @db.VarChar(50)
+  name               String              @db.VarChar(100)
+  capacity           Int?
+  isActive           Boolean             @default(true) @map("is_active")
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz()
+  program            Program             @relation(fields: [programId], references: [id], onDelete: Restrict)
+  academicYear       AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  teachers           Teacher[]
+  enrollments        ClassEnrollment[]
+  schedules          Schedule[]
   attendanceSessions AttendanceSession[]
-  grades         Grade[]
+  grades             Grade[]
+
   @@unique([academicYearId, programId, code], name: "uq_academic_class_context")
   @@index([programId])
   @@index([academicYearId])
@@ -413,31 +464,33 @@ model AcademicClass {
 }
 
 model Subject {
-  id          String   @id @default(uuid()) @map("subject_id")
-  code        String   @unique @db.VarChar(50)
-  name        String   @db.VarChar(150)
-  description String?  @db.VarChar(500)
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+  id          String     @id @default(uuid()) @map("subject_id")
+  code        String     @unique @db.VarChar(50)
+  name        String     @db.VarChar(150)
+  description String?    @db.VarChar(500)
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.Timestamptz()
+  schedules   Schedule[]
+  grades      Grade[]
+
   @@index([name])
   @@index([isActive])
-  schedules Schedule[]
-  grades Grade[]
   @@map("subjects")
 }
 
 model Teacher {
-  id           String        @id @default(uuid()) @map("teacher_id")
-  userProfileId String?       @unique @map("user_id")
-  employeeCode String?       @unique @map("employee_code") @db.VarChar(50)
-  displayName  String        @map("display_name") @db.VarChar(150)
-  isActive     Boolean       @default(true) @map("is_active")
-  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
-  userProfile  UserProfile?  @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
-  classes      AcademicClass[]
-  schedules    Schedule[]
+  id            String          @id @default(uuid()) @map("teacher_id")
+  userProfileId String?         @unique @map("user_id")
+  employeeCode  String?         @unique @map("employee_code") @db.VarChar(50)
+  displayName   String          @map("display_name") @db.VarChar(150)
+  isActive      Boolean         @default(true) @map("is_active")
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
+  userProfile   UserProfile?    @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
+  classes       AcademicClass[]
+  schedules     Schedule[]
+
   @@index([displayName])
   @@index([isActive])
   @@map("teachers")
@@ -456,76 +509,81 @@ enum AcademicRecordStatus {
 }
 
 model ClassEnrollment {
-  id        String @id @default(uuid()) @map("class_enrollment_id")
-  historyId String @unique @map("history_id")
-  classId   String @map("class_id")
-  assignedAt DateTime @default(now()) @map("assigned_at") @db.Timestamptz()
-  endedAt   DateTime? @map("ended_at") @db.Timestamptz()
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  studentId String @map("student_id")
-  history   StudentProgramHistory @relation(fields: [historyId], references: [id], onDelete: Restrict)
-  class     AcademicClass @relation(fields: [classId], references: [id], onDelete: Restrict)
+  id         String                @id @default(uuid()) @map("class_enrollment_id")
+  historyId  String                @unique @map("history_id")
+  classId    String                @map("class_id")
+  assignedAt DateTime              @default(now()) @map("assigned_at") @db.Timestamptz()
+  endedAt    DateTime?             @map("ended_at") @db.Timestamptz()
+  student    Student               @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  studentId  String                @map("student_id")
+  history    StudentProgramHistory @relation(fields: [historyId], references: [id], onDelete: Restrict)
+  class      AcademicClass         @relation(fields: [classId], references: [id], onDelete: Restrict)
+
   @@index([classId])
   @@map("class_enrollments")
 }
 
 model Schedule {
-  id String @id @default(uuid()) @map("schedule_id")
-  classId String @map("class_id")
-  subjectId String @map("subject_id")
-  teacherId String @map("teacher_id")
-  day Int
-  startTime String @map("start_time") @db.VarChar(5)
-  endTime String @map("end_time") @db.VarChar(5)
-  room String? @db.VarChar(100)
-  status AcademicRecordStatus @default(ACTIVE)
-  class AcademicClass @relation(fields: [classId], references: [id], onDelete: Restrict)
-  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  id                 String               @id @default(uuid()) @map("schedule_id")
+  classId            String               @map("class_id")
+  subjectId          String               @map("subject_id")
+  teacherId          String               @map("teacher_id")
+  day                Int
+  startTime          String               @map("start_time") @db.VarChar(5)
+  endTime            String               @map("end_time") @db.VarChar(5)
+  room               String?              @db.VarChar(100)
+  status             AcademicRecordStatus @default(ACTIVE)
+  class              AcademicClass        @relation(fields: [classId], references: [id], onDelete: Restrict)
+  subject            Subject              @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  teacher            Teacher              @relation(fields: [teacherId], references: [id], onDelete: Restrict)
   attendanceSessions AttendanceSession[]
+
   @@index([classId, day])
   @@index([teacherId, day])
   @@map("schedules")
 }
 
 model AttendanceSession {
-  id String @id @default(uuid()) @map("attendance_session_id")
-  classId String @map("class_id")
-  scheduleId String? @map("schedule_id")
-  sessionDate DateTime @map("session_date") @db.Date
-  topic String? @db.VarChar(255)
-  createdBy String @map("created_by")
-  class AcademicClass @relation(fields: [classId], references: [id], onDelete: Restrict)
-  schedule Schedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
-  records AttendanceRecord[]
+  id          String             @id @default(uuid()) @map("attendance_session_id")
+  classId     String             @map("class_id")
+  scheduleId  String?            @map("schedule_id")
+  sessionDate DateTime           @map("session_date") @db.Date
+  topic       String?            @db.VarChar(255)
+  createdBy   String             @map("created_by")
+  class       AcademicClass      @relation(fields: [classId], references: [id], onDelete: Restrict)
+  schedule    Schedule?          @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  records     AttendanceRecord[]
+
   @@unique([classId, sessionDate])
   @@map("attendance_sessions")
 }
 
 model AttendanceRecord {
-  id String @id @default(uuid()) @map("attendance_record_id")
-  sessionId String @map("session_id")
-  studentId String @map("student_id")
-  status AttendanceStatus
-  notes String? @db.VarChar(255)
-  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  id        String            @id @default(uuid()) @map("attendance_record_id")
+  sessionId String            @map("session_id")
+  studentId String            @map("student_id")
+  status    AttendanceStatus
+  notes     String?           @db.VarChar(255)
+  session   AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  student   Student           @relation(fields: [studentId], references: [id], onDelete: Restrict)
+
   @@unique([sessionId, studentId])
   @@map("attendance_records")
 }
 
 model Grade {
-  id String @id @default(uuid()) @map("grade_id")
-  studentId String @map("student_id")
-  classId String @map("class_id")
-  subjectId String @map("subject_id")
-  assessmentKey String @map("assessment_key") @db.VarChar(80)
-  score Decimal @db.Decimal(5,2)
-  letterGrade String? @map("letter_grade") @db.VarChar(3)
-  notes String? @db.VarChar(255)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
-  class AcademicClass @relation(fields: [classId], references: [id], onDelete: Restrict)
-  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  id            String        @id @default(uuid()) @map("grade_id")
+  studentId     String        @map("student_id")
+  classId       String        @map("class_id")
+  subjectId     String        @map("subject_id")
+  assessmentKey String        @map("assessment_key") @db.VarChar(80)
+  score         Decimal       @db.Decimal(5, 2)
+  letterGrade   String?       @map("letter_grade") @db.VarChar(3)
+  notes         String?       @db.VarChar(255)
+  student       Student       @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  class         AcademicClass @relation(fields: [classId], references: [id], onDelete: Restrict)
+  subject       Subject       @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+
   @@unique([studentId, classId, subjectId, assessmentKey])
   @@index([classId, subjectId])
   @@map("grades")

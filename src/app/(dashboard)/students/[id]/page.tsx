@@ -2,24 +2,11 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+type Parent = { id?: string; role?: string; fullName: string; nik?: string | null; phone?: string | null; education?: string | null; educationOther?: string | null; occupation?: string | null; occupationOther?: string | null; monthlyIncome?: number | null; relationship?: string | null };
+type Guardian = { guardianIsDifferent: boolean; guardianSource: 'father' | 'mother' | 'other'; otherParent?: Parent | null };
 type Student = {
-  student_id: string;
-  student_number?: string;
-  photo_url?: string | null;
-  full_name: string;
-  gender: string;
-  birth_place?: string | null;
-  birth_date?: string | null;
-  status: string;
-  email?: string | null;
-  nik?: string | null;
-  phone?: string | null;
-  whatsapp?: string | null;
-  active_program?: {
-    program_name: string;
-    class_name?: string | null;
-    academic_year?: string | null;
-  } | null;
+  student_id: string; student_number?: string; photo_url?: string | null; full_name: string; gender: string; birth_place?: string | null; birth_date?: string | null; status: string; email?: string | null; nik?: string | null; phone?: string | null; whatsapp?: string | null; parents?: Parent[]; guardian?: Guardian | null;
+  active_program?: { program_name: string; class_name?: string | null; academic_year?: string | null } | null;
 };
 
 type History = {
@@ -52,6 +39,8 @@ export default function StudentDetailPage() {
   const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Student>>({});
+  const [parents, setParents] = useState<{ father: Parent; mother: Parent; other: Parent }>({ father: { fullName: '' }, mother: { fullName: '' }, other: { fullName: '' } });
+  const [guardian, setGuardian] = useState<Guardian>({ guardianIsDifferent: false, guardianSource: 'father' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -101,12 +90,10 @@ export default function StudentDetailPage() {
             studentJson.error?.code || 'Gagal memuat siswa'
           );
         setStudent(studentJson.data);
-        setForm({
-          ...studentJson.data,
-          birth_date: studentJson.data.birth_date
-            ? new Date(studentJson.data.birth_date).toISOString().slice(0, 10)
-            : '',
-        });
+        setForm({ ...studentJson.data, birth_date: studentJson.data.birth_date ? new Date(studentJson.data.birth_date).toISOString().slice(0, 10) : '' });
+        const parentRows = studentJson.data.parents || [];
+        setParents({ father: parentRows.find((row) => row.role === 'father') || { fullName: '' }, mother: parentRows.find((row) => row.role === 'mother') || { fullName: '' }, other: parentRows.find((row) => row.role === 'other') || { fullName: '' } });
+        setGuardian(studentJson.data.guardian || { guardianIsDifferent: false, guardianSource: 'father' });
         if (historyResponse.ok) {
           const historyJson = await parseResponse<{ data: History[] }>(
             historyResponse
@@ -136,6 +123,8 @@ export default function StudentDetailPage() {
         email: form.email || null,
         phone: form.phone || null,
         whatsapp: form.whatsapp || null,
+        parents: { father: parents.father, mother: parents.mother },
+        guardian: { ...guardian, ...(guardian.guardianSource === 'other' ? { other: parents.other } : {}) },
       }),
     });
     try {
@@ -343,6 +332,11 @@ export default function StudentDetailPage() {
               </select>
             </label>
           </div>
+          <div className="parent-grid">
+            {(['father', 'mother'] as const).map((role) => <fieldset className="parent-fieldset" key={role}><legend>{role === 'father' ? 'Ayah' : 'Ibu'}</legend><label>Nama lengkap<input required value={parents[role].fullName} onChange={(e) => setParents((current) => ({ ...current, [role]: { ...current[role], fullName: e.target.value } }))} /></label><label>Nomor HP<input type="tel" value={parents[role].phone || ''} onChange={(e) => setParents((current) => ({ ...current, [role]: { ...current[role], phone: e.target.value } }))} /></label><label>Pekerjaan<input value={parents[role].occupation || ''} onChange={(e) => setParents((current) => ({ ...current, [role]: { ...current[role], occupation: e.target.value } }))} /></label><label>Penghasilan bulanan (Rp)<input type="number" min="0" step="1" value={parents[role].monthlyIncome ?? ''} onChange={(e) => setParents((current) => ({ ...current, [role]: { ...current[role], monthlyIncome: e.target.value ? Number(e.target.value) : null } }))} /></label></fieldset>)}
+          </div>
+          <label className="checkbox-row"><input type="checkbox" checked={guardian.guardianIsDifferent} onChange={(e) => setGuardian((current) => ({ ...current, guardianIsDifferent: e.target.checked }))} /> Wali berbeda dari Ayah/Ibu</label>
+          {guardian.guardianIsDifferent && <div className="guardian-section"><p>Wali bersumber dari:</p>{(['father', 'mother', 'other'] as const).map((source) => <label key={source}><input type="radio" name="editGuardianSource" checked={guardian.guardianSource === source} onChange={() => setGuardian((current) => ({ ...current, guardianSource: source }))} /> {source === 'father' ? 'Ayah' : source === 'mother' ? 'Ibu' : 'Berbeda'}</label>)}{guardian.guardianSource === 'other' && <fieldset className="parent-fieldset"><legend>Data wali</legend><label>Hubungan dengan siswa<input required value={parents.other.relationship || ''} onChange={(e) => setParents((current) => ({ ...current, other: { ...current.other, relationship: e.target.value } }))} /></label><label>Nama lengkap<input required value={parents.other.fullName} onChange={(e) => setParents((current) => ({ ...current, other: { ...current.other, fullName: e.target.value } }))} /></label><label>Nomor HP<input type="tel" value={parents.other.phone || ''} onChange={(e) => setParents((current) => ({ ...current, other: { ...current.other, phone: e.target.value } }))} /></label></fieldset>}</div>}
           {error && <p className="state error">{error}</p>}
           <div className="form-actions">
             <button
