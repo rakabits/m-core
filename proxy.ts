@@ -1,4 +1,4 @@
-﻿import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
 export async function proxy(request: NextRequest) {
@@ -17,8 +17,9 @@ export async function proxy(request: NextRequest) {
       },
     },
   );
+  const publicApiPath = request.nextUrl.pathname === '/api/v1/auth/resolve-identity';
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(new URL('/login', request.url));
+  if (!user && !publicApiPath) return NextResponse.redirect(new URL('/login', request.url));
   return response;
 }
 
