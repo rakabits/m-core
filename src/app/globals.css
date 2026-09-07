@@ -48,6 +48,8 @@ table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(
 .new-student-form input,.new-student-form select{border:1px solid #B8C7D8!important;background:#FFFFFF!important;color:var(--body)!important;min-height:42px}
 .new-student-form input:hover,.new-student-form select:hover{border-color:var(--teal)!important}
 .new-student-form input:focus,.new-student-form select:focus{border-color:var(--teal)!important;box-shadow:0 0 0 3px rgba(24,168,155,.16)!important}
+.new-student-form .checkbox-row{display:flex;align-items:center;gap:8px;width:max-content;min-height:22px;line-height:1.4}
+.new-student-form .checkbox-row input[type="checkbox"]{width:18px!important;height:18px!important;min-width:18px!important;min-height:18px!important;margin:0;padding:0;border:1px solid #94A3B8!important;border-radius:4px!important;box-shadow:none!important;accent-color:var(--teal)}
 #save-student-button.save-student-button{background:#18A89B!important;border:1px solid #18A89B!important;color:#FFFFFF!important;min-height:42px;font-weight:800!important;box-shadow:0 6px 14px rgba(24,168,155,.24)!important}
 #save-student-button.save-student-button:hover{background:#12877D!important;border-color:#12877D!important;color:#FFFFFF!important}
 #save-student-button.save-student-button:disabled{background:#86CFC7!important;border-color:#86CFC7!important;color:#FFFFFF!important;opacity:1!important}
