@@ -152,7 +152,8 @@ main textarea,.login-page textarea{min-height:84px;padding:10px 13px;border-radi
 
 .students-page .directory-header,.students-page .directory-search,.students-page .directory-card{width:100%;box-sizing:border-box}
 .students-page .directory-header{margin-left:0;margin-right:0}
-.students-page .directory-search{margin-left:0;margin-right:0}
+.students-page .directory-search{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
+.students-page .directory-search form{margin-left:0;margin-right:0;padding-left:0;padding-right:0}
 .students-page .directory-header>div:first-child{max-width:none}
 .students-page .directory-header>div:first-child{display:block;max-width:none;grid-template-columns:none}
 .student-id-highlight{display:inline-flex;align-items:center;margin-top:8px!important;padding:7px 11px;border:1px solid #b8e8df;border-radius:8px;background:#e8f8f5;color:var(--teal-dark);font-size:12px;font-weight:800;letter-spacing:.01em;box-shadow:0 3px 8px rgba(24,168,155,.1)}
@@ -209,4 +210,8 @@ main textarea,.login-page textarea{min-height:84px;padding:10px 13px;border-radi
 @media(max-width:900px){.directory-card .directory-list{background:repeating-linear-gradient(to bottom,transparent 0,transparent 47px,var(--line-strong) 47px,var(--line-strong) 48px)} }
 
 /* User management */
-.user-management-page .user-list{border-top:1px solid var(--line)}.user-row{display:grid;grid-template-columns:180px minmax(0,1fr) auto;align-items:center;gap:20px;min-height:68px;padding:10px 20px;border-bottom:1px solid var(--line-strong);position:relative}.user-row:last-child{border-bottom:0}.user-row>span{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}.user-row strong{color:var(--ink);font-size:13px}.user-row small{grid-column:2 / -1;color:var(--teal-dark);font-size:11px;overflow-wrap:anywhere}.user-management-page .directory-search{padding:0 20px}.user-management-page .directory-search input{width:min(100%,520px)}@media(max-width:650px){.user-row{grid-template-columns:1fr auto;gap:8px;padding:13px 14px}.user-row strong{grid-column:1/-1;grid-row:1}.user-row>span{grid-column:1;grid-row:2}.user-row button{grid-column:2;grid-row:2}.user-row small{grid-column:1/-1}}
+.user-management-page .user-list{border-top:1px solid var(--line)}.user-row{display:grid;grid-template-columns:180px minmax(0,1fr) auto;align-items:center;gap:20px;min-height:68px;padding:10px 20px;border-bottom:1px solid var(--line-strong);position:relative}.user-row:last-child{border-bottom:0}.user-row>span{color:var(--muted);font-size:12px;font-variant-numeric:tabular-nums}.user-row strong{color:var(--ink);font-size:13px}.user-row small{grid-column:2 / -1;color:var(--teal-dark);font-size:11px;overflow-wrap:anywhere}.user-management-page .directory-search{padding:0}.user-management-page .directory-search input{width:min(100%,520px)}@media(max-width:650px){.user-row{grid-template-columns:1fr auto;gap:8px;padding:13px 14px}.user-row strong{grid-column:1/-1;grid-row:1}.user-row>span{grid-column:1;grid-row:2}.user-row button{grid-column:2;grid-row:2}.user-row small{grid-column:1/-1}}
+/* Master Teacher search alignment */
+main.students-page.user-management-page .directory-search{width:100%;margin:0 0 17px!important;padding:0!important}
+main.students-page.user-management-page .directory-search form{width:100%;margin:0!important;padding:0!important}
+main.students-page.user-management-page .directory-search .search-field{margin:0!important}
