@@ -485,6 +485,13 @@ model Teacher {
   employeeCode  String?         @unique @map("employee_code") @db.VarChar(50)
   displayName   String          @map("display_name") @db.VarChar(150)
   isActive      Boolean         @default(true) @map("is_active")
+  profile       Json?
+  address       Json?
+  employment   Json?
+  education    Json?
+  spouse       Json?
+  family       Json?
+  documents    Json?
   createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
   userProfile   UserProfile?    @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
