@@ -21,11 +21,12 @@ datasource db {
   provider = "postgresql"
 }
 
-// =============================================================================
-// ENUM DEFINITIONS
-// Nilai enum harus sinkron dengan src/shared/enums/
-// Referensi: DATABASE.md Â§8, Â§9, Â§16
-// =============================================================================
+/// Jenjang akademik untuk grouping Academic Master.
+enum AcademicLevel {
+  JUNIOR_HIGH
+  SENIOR_HIGH
+  PRE_UNIVERSITY
+}
 
 /// Jenis kelamin siswa.
 /// Nilai: male | female
@@ -208,28 +209,23 @@ model Program {
   /// Nama lengkap program. Contoh: "Madrasah Tsanawiyah".
   programName String @map("program_name") @db.VarChar(150)
 
-  /// Jenjang pendidikan. Opsional karena tidak semua program memiliki jenjang formal.
-  /// Contoh: "SMP", "SMA", "Persiapan Universitas"
-  educationLevel String? @map("education_level") @db.VarChar(100)
+  /// Jenjang pendidikan lama untuk kompatibilitas.
+  educationLevel String?        @map("education_level") @db.VarChar(100)
+  /// Jenjang resmi untuk grouping Academic Master.
+  academicLevel  AcademicLevel? @map("academic_level")
 
   /// Status aktif program.
-  /// FALSE = program tidak lagi digunakan, tapi history tetap aman.
-  /// JANGAN hapus program yang masih digunakan dalam history.
-  isActive Boolean @default(true) @map("is_active")
-
-  /// Timestamp dibuat.
+  isActive  Boolean  @default(true) @map("is_active")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
-
-  /// Timestamp diperbarui.
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
   programHistories StudentProgramHistory[]
   academicClasses  AcademicClass[]
   scopeAssignments ScopeAssignment[]
 
-  // Indeks untuk performa query.
   @@index([programName])
   @@index([isActive])
+  @@index([academicLevel])
   @@map("programs")
 }
 
@@ -425,15 +421,16 @@ model AuditLog {
 // Each class belongs to exactly one program and one academic year.
 // =============================================================================
 model AcademicYear {
-  id        String          @id @default(uuid()) @map("academic_year_id")
-  code      String          @unique @db.VarChar(9)
-  label     String          @db.VarChar(100)
-  startDate DateTime        @map("start_date") @db.Date
-  endDate   DateTime        @map("end_date") @db.Date
-  isActive  Boolean         @default(false) @map("is_active")
-  createdAt DateTime        @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
+  id        String                  @id @default(uuid()) @map("academic_year_id")
+  code      String                  @unique @db.VarChar(9)
+  label     String                  @db.VarChar(100)
+  startDate DateTime                @map("start_date") @db.Date
+  endDate   DateTime                @map("end_date") @db.Date
+  isActive  Boolean                 @default(false) @map("is_active")
+  createdAt DateTime                @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime                @updatedAt @map("updated_at") @db.Timestamptz()
   classes   AcademicClass[]
+  histories AcademicMasterHistory[]
 
   @@index([isActive])
   @@map("academic_years")
@@ -479,6 +476,32 @@ model Subject {
   @@map("subjects")
 }
 
+model PreUniversityCountry {
+  id        String   @id @default(uuid()) @map("country_id")
+  name      String   @unique @db.VarChar(100)
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@map("pre_university_countries")
+}
+
+model AcademicMasterHistory {
+  id             String        @id @default(uuid()) @map("history_id")
+  academicLevel  AcademicLevel @map("academic_level")
+  academicYearId String?       @map("academic_year_id")
+  snapshot       Json
+  actorId        String?       @map("actor_id")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz()
+
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+
+  @@index([academicLevel, createdAt])
+  @@index([academicYearId])
+  @@map("academic_master_histories")
+}
+
 model Teacher {
   id            String          @id @default(uuid()) @map("teacher_id")
   userProfileId String?         @unique @map("user_id")
@@ -487,11 +510,11 @@ model Teacher {
   isActive      Boolean         @default(true) @map("is_active")
   profile       Json?
   address       Json?
-  employment   Json?
-  education    Json?
-  spouse       Json?
-  family       Json?
-  documents    Json?
+  employment    Json?
+  education     Json?
+  spouse        Json?
+  family        Json?
+  documents     Json?
   createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
   userProfile   UserProfile?    @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
