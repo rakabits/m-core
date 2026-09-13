@@ -39,6 +39,10 @@ const academicLevelConfig: Record<AcademicMasterLevel, AcademicLevelConfig> = {
 
 const levelNames = { JUNIOR_HIGH: ['7', '8', '9'], SENIOR_HIGH: ['10', '11', '12'] } as const;
 
+function normalizeClassName(value: string) {
+  return value.trim().replace(/^kelas\\s+/i, '').replace(/\\s+/g, ' ');
+}
+
 async function resolveAcademicPrograms(tx: Prisma.TransactionClient, level: AcademicMasterLevel) {
   const config = academicLevelConfig[level];
   const fallbackExisting = await tx.program.findUnique({ where: { programCode: config.fallback.programCode } });
@@ -82,7 +86,15 @@ export async function getAcademicMaster() {
   const card = (level: AcademicMasterLevel, source: Awaited<ReturnType<typeof loadAcademicMasterLevel>>) => {
     const latestHistory = source.histories[0];
     const academicYear = latestHistory?.academicYear || source.classes.map(item => item.academicYear).sort((a, b) => b.code.localeCompare(a.code))[0] || source.years[0] || null;
-    return { level, academicYear, classes: levelNames[level].map(name => ({ name, rombelCount: source.classes.filter(item => item.academicYearId === academicYear?.id && (item.name === name || item.name.startsWith(`Kelas ${name}`))).length })) };
+    const yearClasses = source.classes.filter(item => item.academicYearId === academicYear?.id);
+    return {
+      level,
+      academicYear,
+      classes: levelNames[level].map(name => ({
+        name,
+        rombelCount: yearClasses.filter(item => normalizeClassName(item.name) === normalizeClassName(name)).length,
+      })),
+    };
   };
   return { juniorHigh: card('JUNIOR_HIGH', junior), seniorHigh: card('SENIOR_HIGH', senior), preUniversity: { countries } };
 }
