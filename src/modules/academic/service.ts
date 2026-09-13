@@ -130,3 +130,35 @@ export async function saveAcademicMasterEditor(input: { level: AcademicMasterLev
     return { year, classes: created };
   });
 }
+
+export async function resetAcademicMasterSafely(actorId: string) {
+  return prisma.$transaction(async tx => {
+    const profiles = await tx.userProfile.findUnique({ where: { authId: actorId }, select: { id: true } });
+    const programs = await tx.program.findMany({ where: { academicLevel: { in: ['JUNIOR_HIGH', 'SENIOR_HIGH'] } }, select: { id: true, programCode: true, academicLevel: true } });
+    const classes = await tx.academicClass.findMany({ where: { programId: { in: programs.map(program => program.id) } }, select: { id: true, programId: true, academicYearId: true } });
+    const protectedIds = new Set<string>();
+    for (const item of classes) {
+      const [enrollments, schedules, attendance, grades, teachers] = await Promise.all([
+        tx.classEnrollment.count({ where: { classId: item.id } }),
+        tx.schedule.count({ where: { classId: item.id } }),
+        tx.attendanceSession.count({ where: { classId: item.id } }),
+        tx.grade.count({ where: { classId: item.id } }),
+        tx.teacher.count({ where: { classes: { some: { id: item.id } } } }),
+      ]);
+      if (enrollments || schedules || attendance || grades || teachers) protectedIds.add(item.id);
+    }
+    const removableIds = classes.filter(item => !protectedIds.has(item.id)).map(item => item.id);
+    const deactivatedClasses = removableIds.length ? (await tx.academicClass.updateMany({ where: { id: { in: removableIds } }, data: { isActive: false } })).count : 0;
+    const activeClassesByProgram = await tx.academicClass.groupBy({ by: ['programId'], where: { isActive: true, programId: { in: programs.map(program => program.id) } }, _count: { id: true } });
+    const activeProgramIds = new Set(activeClassesByProgram.map(row => row.programId));
+    const deactivatedPrograms = (await tx.program.updateMany({ where: { id: { in: programs.map(program => program.id).filter(id => !activeProgramIds.has(id)) } }, data: { isActive: false } })).count;
+    const years = [...new Set(classes.map(item => item.academicYearId))];
+    const activeYears = await tx.academicClass.findMany({ where: { isActive: true, academicYearId: { in: years } }, select: { academicYearId: true } });
+    const activeYearIds = new Set(activeYears.map(item => item.academicYearId));
+    const deactivatedYears = (await tx.academicYear.updateMany({ where: { id: { in: years.filter(id => !activeYearIds.has(id)) } }, data: { isActive: false } })).count;
+    const histories = (await tx.academicMasterHistory.deleteMany({ where: { academicLevel: { in: ['JUNIOR_HIGH', 'SENIOR_HIGH'] }, academicYearId: { in: years } } })).count;
+    const result = { deactivatedClasses, protectedClasses: protectedIds.size, deactivatedPrograms, deactivatedYears, historiesDeleted: histories };
+    await tx.auditLog.create({ data: { actorId: profiles?.id, action: 'academic_master.safe_reset', resource: 'academic_master', resourceId: 'JUNIOR_HIGH,SENIOR_HIGH', changes: result } });
+    return result;
+  });
+}
