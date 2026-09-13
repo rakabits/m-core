@@ -69,9 +69,9 @@ async function resolveAcademicPrograms(tx: Prisma.TransactionClient, level: Acad
 
 async function loadAcademicMasterLevel(level: AcademicMasterLevel) {
   const [years, programs, classes, histories] = await Promise.all([
-    prisma.academicYear.findMany({ orderBy: { code: 'desc' } }),
+    prisma.academicYear.findMany({ where: { isActive: true }, orderBy: { code: 'desc' } }),
     prisma.program.findMany({ where: { academicLevel: level, isActive: true }, orderBy: { programName: 'asc' } }),
-    prisma.academicClass.findMany({ where: { isActive: true, program: { academicLevel: level } }, include: { program: true, academicYear: true }, orderBy: { name: 'asc' } }),
+    prisma.academicClass.findMany({ where: { isActive: true, program: { academicLevel: level, isActive: true }, academicYear: { isActive: true } }, include: { program: true, academicYear: true }, orderBy: [{ academicYear: { code: 'desc' } }, { name: 'asc' }] }),
     prisma.academicMasterHistory.findMany({ where: { academicLevel: level }, include: { academicYear: true }, orderBy: { createdAt: 'desc' } }),
   ]);
   return { years, programs, classes, histories, defaultNames: academicLevelConfig[level].names };
@@ -84,8 +84,8 @@ export async function getAcademicMaster() {
     prisma.preUniversityCountry.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
   ]);
   const card = (level: AcademicMasterLevel, source: Awaited<ReturnType<typeof loadAcademicMasterLevel>>) => {
-    const latestHistory = source.histories[0];
-    const academicYear = latestHistory?.academicYear || source.classes.map(item => item.academicYear).sort((a, b) => b.code.localeCompare(a.code))[0] || source.years[0] || null;
+    const latestHistory = source.histories.find(item => source.years.some(year => year.id === item.academicYearId));
+    const academicYear = latestHistory?.academicYear || source.classes[0]?.academicYear || source.years[0] || null;
     const yearClasses = source.classes.filter(item => item.academicYearId === academicYear?.id);
     return {
       level,
