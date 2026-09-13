@@ -41,20 +41,25 @@ const levelNames = { JUNIOR_HIGH: ['7', '8', '9'], SENIOR_HIGH: ['10', '11', '12
 
 async function resolveAcademicPrograms(tx: Prisma.TransactionClient, level: AcademicMasterLevel) {
   const config = academicLevelConfig[level];
-  let programs = await tx.program.findMany({ where: { academicLevel: level, isActive: true }, orderBy: { programName: 'asc' } });
-  if (programs.length) return programs;
-
-  const legacy = await tx.program.findMany({ where: { isActive: true }, orderBy: { programName: 'asc' } });
-  const matches = legacy.filter(program => config.patterns.some(pattern => `${program.programCode} ${program.programName} ${program.educationLevel || ''}`.toUpperCase().includes(pattern)));
-  if (matches.length) {
-    await tx.program.updateMany({ where: { id: { in: matches.map(program => program.id) } }, data: { academicLevel: level } });
-    return matches;
+  const fallbackExisting = await tx.program.findUnique({ where: { programCode: config.fallback.programCode } });
+  if (fallbackExisting) {
+    const owner = fallbackExisting.academicLevel === level || !fallbackExisting.academicLevel
+      ? await tx.program.update({ where: { id: fallbackExisting.id }, data: { academicLevel: level, isActive: true } })
+      : null;
+    if (owner) return [owner];
   }
 
-  const existing = await tx.program.findUnique({ where: { programCode: config.fallback.programCode } });
-  const program = existing
-    ? await tx.program.update({ where: { id: existing.id }, data: { academicLevel: level, isActive: true } })
-    : await tx.program.create({ data: { ...config.fallback, academicLevel: level, isActive: true } });
+  const programs = await tx.program.findMany({ where: { academicLevel: level, isActive: true }, orderBy: { programName: 'asc' } });
+  if (programs.length) return [programs[0]];
+
+  const legacy = await tx.program.findMany({ where: { academicLevel: null, isActive: true }, orderBy: { programName: 'asc' } });
+  const matches = legacy.filter(program => config.patterns.some(pattern => `${program.programCode} ${program.programName} ${program.educationLevel || ''}`.toUpperCase().includes(pattern)));
+  if (matches.length === 1) {
+    const owner = await tx.program.update({ where: { id: matches[0].id }, data: { academicLevel: level } });
+    return [owner];
+  }
+
+  const program = await tx.program.create({ data: { ...config.fallback, academicLevel: level, isActive: true } });
   return [program];
 }
 
