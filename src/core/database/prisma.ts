@@ -1,9 +1,9 @@
 /**
- * M-CORE â€” Prisma Database Client (Singleton)
+ * M-CORE — Prisma Database Client (Singleton)
  *
  * File ini mengelola koneksi database melalui Prisma ORM.
  *
- * PENTING â€” SERVERLESS CONSIDERATION:
+ * PENTING — SERVERLESS CONSIDERATION:
  * Next.js di Vercel berjalan sebagai serverless function.
  * Setiap request bisa saja menggunakan instance function yang berbeda.
  * Jika kita membuat PrismaClient baru di setiap request, akan terjadi
@@ -13,7 +13,7 @@
  * globalThis selama development (hot-reload), dan buat instance baru
  * sekali di production.
  *
- * Referensi: ARCHITECTURE.md Â§19, Â§20
+ * Referensi: ARCHITECTURE.md §19, §20
  * Referensi Prisma: https://www.prisma.io/docs/guides/performance-and-optimization/connection-management
  */
 

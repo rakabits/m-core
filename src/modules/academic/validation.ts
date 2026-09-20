@@ -11,7 +11,9 @@ export const teacherCreateSchema = z.object({ userProfileId: z.string().uuid().o
 export const teacherUpdateSchema = teacherCreateSchema.partial();
 export const academicMasterEditorSchema = z.object({
   level: z.enum(['JUNIOR_HIGH','SENIOR_HIGH']),
+  historyId: z.string().uuid().optional().nullable(),
   academicYearId: z.string().uuid().optional().nullable(),
   newAcademicYear: z.object({code:z.string().regex(/^\d{4}\/\d{4}$/),label:z.string().trim().min(2).max(100),startDate:date,endDate:date}).optional(),
   classes: z.array(z.object({name:z.string().trim().min(1).max(100),rombelCount:z.number().int().min(0).max(100)})).min(1).max(20)
 }).refine(v=>v.academicYearId||v.newAcademicYear,{message:'Tahun ajaran wajib dipilih atau dibuat'});
+export const academicMasterHistoryActivateSchema = z.object({ level: z.enum(['JUNIOR_HIGH','SENIOR_HIGH']), historyId: z.string().uuid() });

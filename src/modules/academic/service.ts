@@ -84,7 +84,7 @@ export async function getAcademicMaster() {
     prisma.preUniversityCountry.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }),
   ]);
   const card = (level: AcademicMasterLevel, source: Awaited<ReturnType<typeof loadAcademicMasterLevel>>) => {
-    const latestHistory = source.histories.find(item => source.years.some(year => year.id === item.academicYearId));
+    const latestHistory = source.histories.find(item => item.academicYear?.isActive && source.years.some(year => year.id === item.academicYearId)) || source.histories.find(item => source.years.some(year => year.id === item.academicYearId));
     const academicYear = latestHistory?.academicYear || source.classes[0]?.academicYear || source.years[0] || null;
     const yearClasses = source.classes.filter(item => item.academicYearId === academicYear?.id);
     return {
@@ -100,19 +100,34 @@ export async function getAcademicMaster() {
 }
 
 export async function listAcademicMasterHistory(level: AcademicMasterLevel) { return prisma.academicMasterHistory.findMany({ where: { academicLevel: level }, include: { academicYear: true }, orderBy: { createdAt: 'desc' } }); }
+export async function activateAcademicMasterHistory(level: AcademicMasterLevel, historyId: string, actorId: string) {
+  return prisma.$transaction(async tx => {
+    const selected = await tx.academicMasterHistory.findFirst({ where: { id: historyId, academicLevel: level }, include: { academicYear: true } });
+    if (!selected?.academicYearId) throw new Error('ACADEMIC_HISTORY_NOT_FOUND');
+    const yearIds = (await tx.academicMasterHistory.findMany({ where: { academicLevel: level, academicYearId: { not: null } }, select: { academicYearId: true } })).map(item => item.academicYearId!).filter(Boolean);
+    await tx.academicYear.updateMany({ where: { id: { in: yearIds } }, data: { isActive: false } });
+    const year = await tx.academicYear.update({ where: { id: selected.academicYearId }, data: { isActive: true } });
+    await tx.auditLog.create({ data: { actorId, action: 'academic_master.history_activate', resource: 'academic_master_history', resourceId: selected.id, changes: { level, academicYearId: year.id } } });
+    return { historyId: selected.id, year };
+  });
+}
 export async function saveAcademicMasterSnapshot(level: AcademicMasterLevel, actorId: string, snapshot: unknown, academicYearId?: string) { return prisma.academicMasterHistory.create({ data: { academicLevel: level, actorId, academicYearId, snapshot: jsonValue(snapshot)! } }); }
 export async function listCountries() { return prisma.preUniversityCountry.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }); }
 export async function createCountry(name: string, actorId: string) { return prisma.$transaction(async tx => { const row = await tx.preUniversityCountry.create({ data: { name: name.trim() } }); const profile = await tx.userProfile.findUnique({ where: { authId: actorId }, select: { id: true } }); await tx.auditLog.create({ data: { actorId: profile?.id, action: 'pre_university_country.create', resource: 'pre_university_country', resourceId: row.id, changes: { name: name.trim() } } }); return row; }); }
 
 export async function loadAcademicMasterEditor(level: AcademicMasterLevel) { return loadAcademicMasterLevel(level); }
 
-export async function saveAcademicMasterEditor(input: { level: AcademicMasterLevel; academicYearId?: string | null; newAcademicYear?: { code: string; label: string; startDate: Date; endDate: Date }; classes: { name: string; rombelCount: number }[] }, actorId: string) {
+export async function saveAcademicMasterEditor(input: { level: AcademicMasterLevel; historyId?: string | null; academicYearId?: string | null; newAcademicYear?: { code: string; label: string; startDate: Date; endDate: Date }; classes: { name: string; rombelCount: number }[] }, actorId: string) {
   return prisma.$transaction(async tx => {
     const profile = await tx.userProfile.findUnique({ where: { authId: actorId }, select: { id: true } });
     const auditActorId = profile?.id;
     const level = input.level;
     let year = input.academicYearId ? await tx.academicYear.findUniqueOrThrow({ where: { id: input.academicYearId } }) : null;
-    if (input.newAcademicYear) year = await tx.academicYear.create({ data: { ...input.newAcademicYear, isActive: true } });
+    if (input.newAcademicYear) {
+      const previousYearIds = (await tx.academicMasterHistory.findMany({ where: { academicLevel: level, academicYearId: { not: null } }, select: { academicYearId: true } })).map(item => item.academicYearId!).filter(Boolean);
+      await tx.academicYear.updateMany({ where: { id: { in: previousYearIds } }, data: { isActive: false } });
+      year = await tx.academicYear.create({ data: { ...input.newAcademicYear, isActive: true } });
+    }
     if (!year) throw new Error('ACADEMIC_YEAR_REQUIRED');
 
     const programs = await resolveAcademicPrograms(tx, level);
@@ -125,8 +140,14 @@ export async function saveAcademicMasterEditor(input: { level: AcademicMasterLev
       if (current.length > item.rombelCount) await tx.academicClass.updateMany({ where: { id: { in: current.slice(item.rombelCount).map(row => row.id), }, program: { academicLevel: level } }, data: { isActive: false } });
     }
     const snapshot = { level, academicYear: year, classes: input.classes };
-    await tx.academicMasterHistory.create({ data: { academicLevel: level, academicYearId: year.id, actorId: auditActorId, snapshot: jsonValue(snapshot)! } });
-    await tx.auditLog.create({ data: { actorId: auditActorId, action: 'academic_master.update', resource: 'academic_master', resourceId: year.id, changes: jsonValue(snapshot)! } });
+    if (input.historyId) {
+      const history = await tx.academicMasterHistory.findUniqueOrThrow({ where: { id: input.historyId } });
+      if (history.academicLevel !== level || history.academicYearId !== year.id) throw new Error('ACADEMIC_HISTORY_MISMATCH');
+      await tx.academicMasterHistory.update({ where: { id: input.historyId }, data: { snapshot, actorId: auditActorId } });
+    } else {
+      await tx.academicMasterHistory.create({ data: { academicLevel: level, academicYearId: year.id, actorId: auditActorId, snapshot: jsonValue(snapshot)! } });
+    }
+    await tx.auditLog.create({ data: { actorId: auditActorId, action: input.historyId ? 'academic_master.history_update' : 'academic_master.update', resource: 'academic_master', resourceId: year.id, changes: jsonValue(snapshot)! } });
     return { year, classes: created };
   });
 }
