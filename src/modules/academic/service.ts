@@ -111,7 +111,17 @@ export async function activateAcademicMasterHistory(level: AcademicMasterLevel, 
     return { historyId: selected.id, year };
   });
 }
-export async function saveAcademicMasterSnapshot(level: AcademicMasterLevel, actorId: string, snapshot: unknown, academicYearId?: string) { return prisma.academicMasterHistory.create({ data: { academicLevel: level, actorId, academicYearId, snapshot: jsonValue(snapshot)! } }); }
+export async function deleteAcademicMasterHistory(level: AcademicMasterLevel, historyId: string, actorId: string) {
+  return prisma.$transaction(async tx => {
+    const history = await tx.academicMasterHistory.findFirst({ where: { id: historyId, academicLevel: level }, include: { academicYear: true } });
+    if (!history) throw new Error('ACADEMIC_HISTORY_NOT_FOUND');
+    if (history.academicYear?.isActive) throw new Error('ACADEMIC_ACTIVE_HISTORY_DELETE_FORBIDDEN');
+    await tx.academicMasterHistory.delete({ where: { id: history.id } });
+    await tx.auditLog.create({ data: { actorId: (await tx.userProfile.findUnique({ where: { authId: actorId }, select: { id: true } }))?.id, action: 'academic_master.history_delete', resource: 'academic_master_history', resourceId: history.id, changes: { level, academicYearId: history.academicYearId } } });
+    return { historyId: history.id };
+  });
+}
+
 export async function listCountries() { return prisma.preUniversityCountry.findMany({ where: { isActive: true }, orderBy: { name: 'asc' } }); }
 export async function createCountry(name: string, actorId: string) { return prisma.$transaction(async tx => { const row = await tx.preUniversityCountry.create({ data: { name: name.trim() } }); const profile = await tx.userProfile.findUnique({ where: { authId: actorId }, select: { id: true } }); await tx.auditLog.create({ data: { actorId: profile?.id, action: 'pre_university_country.create', resource: 'pre_university_country', resourceId: row.id, changes: { name: name.trim() } } }); return row; }); }
 
