@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createSupabaseBrowserClient } from '@/lib/supabase/browser';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,12 +14,8 @@ export default function LoginPage() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError(''); setLoading(true);
     try {
-      const resolved = await fetch('/api/v1/auth/resolve-identity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier }) });
-      if (!resolved.ok) throw new Error('INVALID_CREDENTIALS');
-      const payload = await resolved.json() as { data?: { email?: string } };
-      const supabase = createSupabaseBrowserClient();
-      const { error: authError } = await supabase.auth.signInWithPassword({ email: payload.data?.email ?? '', password });
-      if (authError) throw new Error('INVALID_CREDENTIALS');
+      const response = await fetch('/api/v1/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identifier, password }) });
+      if (!response.ok) throw new Error('INVALID_CREDENTIALS');
       if (remember) localStorage.setItem('m-core-remember-login', 'true'); else localStorage.removeItem('m-core-remember-login');
       router.replace('/dashboard'); router.refresh();
     } catch { setError('Kredensial tidak valid. Periksa Email, ID, NIK, dan password Anda.'); }

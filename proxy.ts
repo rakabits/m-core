@@ -1,26 +1,12 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
+import { getCurrentUser } from '@/lib/auth/local';
 
 export async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => request.cookies.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
-        },
-      },
-    },
-  );
-  const publicApiPath = request.nextUrl.pathname === '/api/v1/auth/resolve-identity';
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user && !publicApiPath) return NextResponse.redirect(new URL('/login', request.url));
-  return response;
+  const publicPaths = ['/api/v1/auth/login', '/api/v1/auth/resolve-identity'];
+  const isPublic = publicPaths.some((path) => request.nextUrl.pathname === path);
+  const user = await getCurrentUser();
+  if (!user && !isPublic) return NextResponse.redirect(new URL('/login', request.url));
+  return NextResponse.next();
 }
 
 export const config = { matcher: ['/dashboard/:path*', '/api/v1/:path*'] };

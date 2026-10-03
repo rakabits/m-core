@@ -1,18 +1,11 @@
-﻿import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { getCurrentUser } from '@/lib/auth/local';
 
+/** Compatibility adapter while API handlers migrate to the local session service. */
 export async function createSupabaseServerClient() {
-  const cookieStore = await cookies();
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll(cookiesToSet) {
-          try { cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options)); } catch {}
-        },
-      },
+  return {
+    auth: {
+      getUser: async () => ({ data: { user: await getCurrentUser() } }),
+      signOut: async () => { return { error: null }; },
     },
-  );
+  };
 }
