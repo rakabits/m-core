@@ -223,12 +223,14 @@ model Program {
   /// ID internal program.
   id String @id @default(uuid()) @map("program_id")
 
-  /// Kode unik program. Contoh: MTS, MA, PRA-UNIV, TURKIYE.
-  /// UNIQUE, tidak boleh duplikat.
-  programCode String @unique @map("program_code") @db.VarChar(50)
+  /// Kode program. Dapat digunakan kembali pada tahun akademik berbeda.
+  programCode String @map("program_code") @db.VarChar(50)
 
-  /// Nama lengkap program. Contoh: "Madrasah Tsanawiyah".
+  /// Nama lengkap program.
   programName String @map("program_name") @db.VarChar(150)
+
+  /// Tahun akademik/program saat record ini aktif.
+  academicYear String @default("2025/2026") @map("academic_year") @db.VarChar(9)
 
   /// Jenjang pendidikan lama untuk kompatibilitas.
   educationLevel String?        @map("education_level") @db.VarChar(100)
@@ -249,9 +251,11 @@ model Program {
   applicants            Applicant[]
   scopeAssignments      ScopeAssignment[]
 
+  @@unique([programCode, academicYear], name: "uq_program_code_academic_year")
   @@index([programName])
   @@index([isActive])
   @@index([academicLevel])
+  @@index([academicYear])
   @@map("programs")
 }
 
