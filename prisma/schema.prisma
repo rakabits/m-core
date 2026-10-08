@@ -28,9 +28,29 @@ enum AcademicLevel {
   PRE_UNIVERSITY
 }
 
+/// Status periode pendaftaran program.
+enum EnrollmentPeriodStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  ARCHIVED
+}
+
+/// Status calon peserta pada proses verifikasi pendaftaran.
+enum ApplicantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PaymentMethod {
+  TRANSFER
+  CASH
+}
+
 /// Jenis kelamin siswa.
 /// Nilai: male | female
-/// Referensi: DATABASE.md Â§8
+/// Referensi: DATABASE.md §8
 enum Gender {
   male
   female
@@ -128,9 +148,10 @@ model Student {
   classEnrollments  ClassEnrollment[]
   attendanceRecords AttendanceRecord[]
   grades            Grade[]
+  guardianConfig    StudentGuardian?
+  applicants        Applicant[]
   userProfile       UserProfile?
   parents           StudentParent[]
-  guardianConfig    StudentGuardian?
 
   // Indeks untuk performa query.
   // Referensi: DATABASE.md Â§22
@@ -224,12 +245,73 @@ model Program {
   juniorHighClasses     JuniorHighClass[]
   seniorHighClasses     SeniorHighClass[]
   preUniversityPrograms PreUniversityProgram[]
+  enrollmentPeriods     EnrollmentPeriod[]
+  applicants            Applicant[]
   scopeAssignments      ScopeAssignment[]
 
   @@index([programName])
   @@index([isActive])
   @@index([academicLevel])
   @@map("programs")
+}
+
+/// Konfigurasi pendaftaran program untuk satu periode akademik.
+/// Satu program dapat dibuka kembali pada periode berbeda tanpa mengubah histori lama.
+model EnrollmentPeriod {
+  id              String                 @id @default(uuid()) @map("enrollment_period_id")
+  programId       String                 @map("program_id")
+  name            String                 @db.VarChar(150)
+  status          EnrollmentPeriodStatus @default(DRAFT)
+  registrationFee Int                    @map("registration_fee")
+  currency        String                 @default("IDR") @db.Char(3)
+  startsAt        DateTime               @map("starts_at") @db.Timestamptz()
+  endsAt          DateTime               @map("ends_at") @db.Timestamptz()
+  notes           String?                @db.Text
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamptz()
+  program         Program                @relation(fields: [programId], references: [id], onDelete: Restrict)
+  applicants      Applicant[]
+
+  @@index([programId, status])
+  @@index([status, startsAt, endsAt])
+  @@map("enrollment_periods")
+}
+
+// =============================================================================
+// MODEL: Applicant
+// =============================================================================
+model Applicant {
+  id                 String           @id @default(uuid()) @map("applicant_id")
+  registrationNo     String           @unique @map("registration_no") @db.VarChar(40)
+  publicToken        String           @unique @map("public_token") @db.VarChar(80)
+  fullName           String?          @map("full_name") @db.VarChar(150)
+  gender             Gender?
+  birthPlace         String?          @map("birth_place") @db.VarChar(100)
+  birthDate          DateTime?        @map("birth_date") @db.Date
+  nationalId         String?          @unique @map("national_id") @db.VarChar(30)
+  email              String?          @db.VarChar(180)
+  studentPhone       String?          @map("student_phone") @db.VarChar(30)
+  studentWhatsapp    String?          @map("student_whatsapp") @db.VarChar(30)
+  parentPhone        String?          @map("parent_phone") @db.VarChar(30)
+  programId          String           @map("program_id")
+  enrollmentPeriodId String           @map("enrollment_period_id")
+  studentId          String?          @map("student_id")
+  paymentProofUrl    String?          @map("payment_proof_url") @db.VarChar(500)
+  paymentMethod      PaymentMethod?   @map("payment_method")
+  status             ApplicantStatus  @default(PENDING)
+  rejectionReason    String?          @map("rejection_reason") @db.VarChar(500)
+  reviewedAt         DateTime?        @map("reviewed_at") @db.Timestamptz()
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz()
+  program            Program          @relation(fields: [programId], references: [id], onDelete: Restrict)
+  enrollmentPeriod   EnrollmentPeriod @relation(fields: [enrollmentPeriodId], references: [id], onDelete: Restrict)
+  student            Student?         @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([programId])
+  @@index([enrollmentPeriodId])
+  @@index([studentId])
+  @@map("applicants")
 }
 
 // =============================================================================
