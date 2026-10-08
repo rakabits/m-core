@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 type Period = { id: string; name: string; registrationFee: number; status: string; program: { id: string; programName: string; programCode: string } };
 type Student = { id: string; studentNumber: number; fullName: string; nik?: string | null; email?: string | null; programHistories?: { program?: { programName: string } }[] };
-type Generated = { registrationNo: string; publicToken: string; fullName?: string | null; nationalId?: string | null; program: { programName: string }; enrollmentPeriod: { registrationFee: number; name: string } };
+type Generated = { registrationNo: string; publicToken: string; shortlinkUrl: string; shortlinkCode: string; fullName?: string | null; nationalId?: string | null; program: { programName: string }; enrollmentPeriod: { registrationFee: number; name: string } };
 
 const formatMoney = (value: number) => `Rp ${value.toLocaleString('id-ID')}`;
 
@@ -54,7 +54,7 @@ export default function GenerateLinkPage() {
     } catch (error) { setMessage(error instanceof Error ? error.message : 'Link gagal dibuat.'); } finally { setLoading(false); }
   }
 
-  const publicLink = generated && typeof window !== 'undefined' ? `${window.location.origin}/register/${generated.publicToken}` : '';
+  const publicLink = generated?.shortlinkUrl || '';
   async function copyLink() { if (!publicLink) return; await navigator.clipboard.writeText(publicLink); setMessage('Link berhasil disalin.'); }
 
   return <main className="students-page academic-page generate-link-page">
