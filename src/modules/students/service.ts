@@ -6,9 +6,10 @@ import type { ScopeInput } from '@/modules/rbac/authorization';
 import { studentScopeWhere } from './scope';
 
 const baseSelect = { id: true, studentNumber: true, photoUrl: true, photoPublicId: true, fullName: true, gender: true, birthPlace: true, birthDate: true, status: true, email: true, nik: true, phone: true, whatsapp: true, createdAt: true, updatedAt: true, parents: true, guardianConfig: true, programHistories: { where: { status: 'enrolled' }, include: { program: { select: { id: true, programName: true } } }, orderBy: { createdAt: 'desc' }, take: 1 } } as const;
+const displayAcademicYear=(value:string|null|undefined)=>{if(!value)return value;const parts=value.split('/');return parts.length===2&&parts[0]===parts[1]?parts[0]:value};
 export function presentStudent(student: any, sensitive = false) {
   const activeHistory = student.programHistories?.[0];
-  const data: any = { student_id: student.id, student_number: String(student.studentNumber).padStart(5, '0'), photo_url: student.photoUrl, full_name: student.fullName, gender: student.gender, birth_place: student.birthPlace, status: student.status, active_program: activeHistory ? { program_id: activeHistory.program.id, program_name: activeHistory.program.programName, academic_year: activeHistory.academicYear, class_name: activeHistory.className } : null, created_at: student.createdAt, updated_at: student.updatedAt };
+  const data: any = { student_id: student.id, student_number: String(student.studentNumber).padStart(5, '0'), photo_url: student.photoUrl, full_name: student.fullName, gender: student.gender, birth_place: student.birthPlace, status: student.status, active_program: activeHistory ? { program_id: activeHistory.program.id, program_name: activeHistory.program.programName, academic_year: displayAcademicYear(activeHistory.academicYear), class_name: activeHistory.className } : null, created_at: student.createdAt, updated_at: student.updatedAt };
   if (sensitive) Object.assign(data, { birth_date: student.birthDate, nik: student.nik, email: student.email, phone: student.phone, whatsapp: student.whatsapp });
   return data;
 }
