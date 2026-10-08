@@ -219,9 +219,12 @@ model Program {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  programHistories StudentProgramHistory[]
-  academicClasses  AcademicClass[]
-  scopeAssignments ScopeAssignment[]
+  programHistories      StudentProgramHistory[]
+  academicClasses       AcademicClass[]
+  juniorHighClasses     JuniorHighClass[]
+  seniorHighClasses     SeniorHighClass[]
+  preUniversityPrograms PreUniversityProgram[]
+  scopeAssignments      ScopeAssignment[]
 
   @@index([programName])
   @@index([isActive])
@@ -453,19 +456,86 @@ model AuditLog {
 // Each class belongs to exactly one program and one academic year.
 // =============================================================================
 model AcademicYear {
-  id        String                  @id @default(uuid()) @map("academic_year_id")
-  code      String                  @unique @db.VarChar(9)
-  label     String                  @db.VarChar(100)
-  startDate DateTime                @map("start_date") @db.Date
-  endDate   DateTime                @map("end_date") @db.Date
-  isActive  Boolean                 @default(false) @map("is_active")
-  createdAt DateTime                @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt DateTime                @updatedAt @map("updated_at") @db.Timestamptz()
-  classes   AcademicClass[]
-  histories AcademicMasterHistory[]
+  id                    String                  @id @default(uuid()) @map("academic_year_id")
+  code                  String                  @unique @db.VarChar(9)
+  label                 String                  @db.VarChar(100)
+  startDate             DateTime                @map("start_date") @db.Date
+  endDate               DateTime                @map("end_date") @db.Date
+  isActive              Boolean                 @default(false) @map("is_active")
+  createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt             DateTime                @updatedAt @map("updated_at") @db.Timestamptz()
+  classes               AcademicClass[]
+  juniorHighClasses     JuniorHighClass[]
+  seniorHighClasses     SeniorHighClass[]
+  preUniversityPrograms PreUniversityProgram[]
+  histories             AcademicMasterHistory[]
 
   @@index([isActive])
   @@map("academic_years")
+}
+
+/// Kelompok kelas Junior High/SMP. Dipisahkan dari jenjang lain agar atribut kelas tidak saling nullable dan tidak terjadi anomali update.
+model JuniorHighClass {
+  id             String       @id @default(uuid()) @map("junior_high_class_id")
+  programId      String       @map("program_id")
+  academicYearId String       @map("academic_year_id")
+  code           String       @db.VarChar(50)
+  name           String       @db.VarChar(100)
+  grade          Int
+  capacity       Int?
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+  program        Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
+  @@unique([academicYearId, programId, code], name: "uq_junior_high_class_context")
+  @@index([programId])
+  @@index([academicYearId])
+  @@map("junior_high_classes")
+}
+
+/// Kelompok kelas Senior High/SMA. Terpisah dari Junior High karena aturan grade dan atribut dapat berkembang independen.
+model SeniorHighClass {
+  id             String       @id @default(uuid()) @map("senior_high_class_id")
+  programId      String       @map("program_id")
+  academicYearId String       @map("academic_year_id")
+  code           String       @db.VarChar(50)
+  name           String       @db.VarChar(100)
+  grade          Int
+  specialization String?      @db.VarChar(100)
+  capacity       Int?
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+  program        Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
+  @@unique([academicYearId, programId, code], name: "uq_senior_high_class_context")
+  @@index([programId])
+  @@index([academicYearId])
+  @@map("senior_high_classes")
+}
+
+/// Program Pre-University. Dipisahkan dari tabel kelas sekolah karena memakai tujuan studi, bukan grade kelas.
+model PreUniversityProgram {
+  id             String       @id @default(uuid()) @map("pre_university_program_id")
+  programId      String       @map("program_id")
+  academicYearId String       @map("academic_year_id")
+  code           String       @db.VarChar(50)
+  name           String       @db.VarChar(150)
+  destination    String?      @db.VarChar(100)
+  capacity       Int?
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+  program        Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+
+  @@unique([academicYearId, programId, code], name: "uq_pre_university_program_context")
+  @@index([programId])
+  @@index([academicYearId])
+  @@map("pre_university_programs")
 }
 
 model AcademicClass {
