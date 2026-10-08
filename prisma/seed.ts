@@ -4,7 +4,7 @@ import 'dotenv/config';
 
 const adapter = new PrismaPg({ connectionString: process.env.DIRECT_URL });
 const prisma = new PrismaClient({ adapter });
-const permissions = ['student.view','student.view_sensitive','student.create','student.update','student.promote','student.transfer','student.mark_alumni','academic_year.view','academic_year.manage','class.view','class.manage','subject.view','subject.manage','teacher.view','teacher.manage','schedule.view','schedule.manage','attendance.view','attendance.create','attendance.update','grade.view','grade.create','grade.update','report.academic'];
+const permissions = ['student.view','student.view_sensitive','student.create','student.update','student.promote','student.transfer','student.mark_alumni','academic_year.view','academic_year.manage','class.view','class.manage','subject.view','subject.manage','teacher.view','teacher.manage','schedule.view','schedule.manage','attendance.view','attendance.create','attendance.update','grade.view','grade.create','grade.update','report.academic','program.view','program.create','program.update'];
 
 async function main() {
   await Promise.all(permissions.map((code) => prisma.permission.upsert({ where: { code }, update: {}, create: { code } })));

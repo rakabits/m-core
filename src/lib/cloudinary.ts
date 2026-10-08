@@ -27,3 +27,13 @@ export async function deleteStudentPhoto(publicId: string) {
   assertCloudinaryConfigured();
   await cloudinary.uploader.destroy(publicId, { resource_type: 'image', invalidate: true });
 }
+export async function uploadPaymentProof(buffer: Buffer, fileName: string) {
+  assertCloudinaryConfigured();
+  return new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream({ folder: 'bukti_bayar', public_id: `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9_-]/g, '-')}`, resource_type: 'image', overwrite: false, quality: 'auto', fetch_format: 'auto' }, (error, result) => {
+      if (error || !result) return reject(error ?? new Error('CLOUDINARY_UPLOAD_FAILED'));
+      resolve({ secure_url: result.secure_url, public_id: result.public_id });
+    });
+    stream.end(buffer);
+  });
+}

@@ -802,3 +802,15 @@ model Grade {
   @@index([classId, subjectId])
   @@map("grades")
 }
+
+/// Tautan pendek yang dapat dibagikan.
+model Shortlink {
+  id        String   @id @default(cuid())
+  title     String
+  targetUrl String
+  code      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([createdAt])
+}

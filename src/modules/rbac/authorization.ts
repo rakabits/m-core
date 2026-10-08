@@ -5,7 +5,7 @@ export function scopeAllowsClass(scope:ScopeInput, target:{programId:string;code
 
 export async function hasPermission(authId: string, permission: string) {
   const user = await prisma.userProfile.findUnique({ where: { authId }, include: { roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } } } });
-  return Boolean(user?.isActive && user.roles.some(({ role }) => role.permissions.some(({ permission: item }) => item.code === permission)));
+  return Boolean(user?.isActive && user.roles.some(({ role }) => role.name === 'SUPER_ADMIN' || role.permissions.some(({ permission: item }) => item.code === permission)));
 }
 
 export async function getScopes(authId: string): Promise<ScopeInput[]> {

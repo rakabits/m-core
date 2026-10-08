@@ -11,7 +11,7 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) throw new Error('Supabase admin environment is incomplete');
 const supabase = createClient(url, key, { auth: { persistSession: false } });
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DIRECT_URL }) });
-const permissions = ['student.view','student.view_sensitive','student.create','student.update','student.promote','student.transfer','student.mark_alumni','academic_year.view','academic_year.manage','class.view','class.manage','subject.view','subject.manage','teacher.view','teacher.manage','schedule.view','schedule.manage','attendance.view','attendance.create','attendance.update','grade.view','grade.create','grade.update','report.academic'];
+const permissions = ['student.view','student.view_sensitive','student.create','student.update','student.promote','student.transfer','student.mark_alumni','academic_year.view','academic_year.manage','class.view','class.manage','subject.view','subject.manage','teacher.view','teacher.manage','schedule.view','schedule.manage','attendance.view','attendance.create','attendance.update','grade.view','grade.create','grade.update','report.academic','program.view','program.create','program.update'];
 try {
   const listed = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (listed.error) throw listed.error;
