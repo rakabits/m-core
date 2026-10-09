@@ -23,7 +23,11 @@ function parentPhoneRefinement(data: any, ctx: z.RefinementCtx) {
 }
 const studentFields = z.object({
   fullName: z.string().trim().min(2).max(150), gender, birthPlace: optionalText(100), birthDate: z.coerce.date().optional().nullable(), nik: z.string().regex(/^\d{16}$/).optional().nullable(),
-  email: z.string().email().max(150).optional().nullable(), phone: optionalText(20), whatsapp: optionalText(20), status: studentStatus.default('active'), parents: parentFields, guardian: guardianSchema.default({ guardianIsDifferent: false, guardianSource: 'father' }),
+  mtsStudentId: optionalText(50), maStudentId: optionalText(50), nisn: optionalText(20), familyCardNumber: optionalText(20), passportNumber: optionalText(30),
+  email: z.string().email().max(150).optional().nullable(), phone: optionalText(20), whatsapp: optionalText(20), telegramUsername: optionalText(100),
+  addressLine: optionalText(255), addressRt: optionalText(5), addressRw: optionalText(5), village: optionalText(100), district: optionalText(100), cityRegency: optionalText(100), province: optionalText(100), postalCode: optionalText(10),
+  heightCm: z.coerce.number().positive().max(300).optional().nullable(), weightKg: z.coerce.number().positive().max(500).optional().nullable(), siblingCount: z.coerce.number().int().nonnegative().optional().nullable(), birthOrder: z.coerce.number().int().positive().optional().nullable(),
+  status: studentStatus.default('active'), parents: parentFields, guardian: guardianSchema.default({ guardianIsDifferent: false, guardianSource: 'father' }),
 });
 export const studentCreateSchema = studentFields.superRefine(parentPhoneRefinement);
 export const studentUpdateSchema = studentFields.partial().omit({ status: true }).extend({ status: studentStatus.optional() }).superRefine(parentPhoneRefinement);

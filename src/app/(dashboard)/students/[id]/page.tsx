@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 type Parent = { id?: string; role?: string; fullName: string; nik?: string | null; phone?: string | null; education?: string | null; educationOther?: string | null; occupation?: string | null; occupationOther?: string | null; monthlyIncome?: number | null; relationship?: string | null };
 type Guardian = { guardianIsDifferent: boolean; guardianSource: 'father' | 'mother' | 'other'; otherParent?: Parent | null };
 type Student = {
-  student_id: string; student_number?: string; photo_url?: string | null; full_name: string; gender: string; birth_place?: string | null; birth_date?: string | null; status: string; email?: string | null; nik?: string | null; phone?: string | null; whatsapp?: string | null; parents?: Parent[]; guardian?: Guardian | null;
+  student_id: string; student_number?: string; mts_student_id?: string | null; ma_student_id?: string | null; photo_url?: string | null; full_name: string; gender: string; birth_place?: string | null; birth_date?: string | null; status: string; email?: string | null; nik?: string | null; nisn?: string | null; family_card_number?: string | null; passport_number?: string | null; phone?: string | null; whatsapp?: string | null; telegram_username?: string | null; address?: { line?: string | null; rt?: string | null; rw?: string | null; village?: string | null; district?: string | null; city_regency?: string | null; province?: string | null; postal_code?: string | null }; physical?: { height_cm?: number | string | null; weight_kg?: number | string | null; sibling_count?: number | null; birth_order?: number | null }; education_histories?: Array<{ id: string; level: string; institutionName: string; cityRegency?: string | null; province?: string | null; graduationYear?: number | null; degreeLevel?: string | null }>; parents?: Parent[]; guardian?: Guardian | null;
   active_program?: { program_name: string; class_name?: string | null; academic_year?: string | null } | null;
 };
 
@@ -357,89 +357,27 @@ export default function StudentDetailPage() {
             <div className="profile-grid">
               <div>
                 <span className="section-kicker">IDENTITAS SISWA</span>
-                <p>
-                  <span>Gender</span>
-                  <b>:</b>
-                  <strong>
-                    {student.gender === 'male' ? 'Laki-laki' : 'Perempuan'}
-                  </strong>
-                </p>
-                <p>
-                  <span>Tempat lahir</span>
-                  <b>:</b>
-                  <strong>{student.birth_place || 'Belum diisi'}</strong>
-                </p>
-                <p>
-                  <span>Tanggal lahir</span>
-                  <b>:</b>
-                  <strong>
-                    {student.birth_date
-                      ? new Date(student.birth_date).toLocaleDateString('id-ID')
-                      : 'Belum diisi'}
-                  </strong>
-                </p>
-                <p>
-                  <span>NIK</span>
-                  <b>:</b>
-                  <strong>{student.nik || 'Belum diisi'}</strong>
-                </p>
+                {([['Student Number', student.student_number], ['ID Siswa MTs', student.mts_student_id], ['ID Siswa MA', student.ma_student_id], ['Nama lengkap', student.full_name], ['Jenis kelamin', student.gender === 'male' ? 'Laki-laki' : 'Perempuan'], ['Tempat lahir', student.birth_place], ['Tanggal lahir', student.birth_date ? new Date(student.birth_date).toLocaleDateString('id-ID') : null], ['NIK', student.nik], ['NISN', student.nisn], ['Nomor KK', student.family_card_number], ['Nomor paspor', student.passport_number], ['Status', student.status]] as const).map(([label, value]) => <p key={label}><span>{label}</span><b>:</b><strong>{value || 'Belum diisi'}</strong></p>)}
               </div>
               <div>
                 <span className="section-kicker">KONTAK</span>
-                <p>
-                  <span>Email</span>
-                  <b>:</b>
-                  <strong>{student.email || 'Belum diisi'}</strong>
-                </p>
-                <p>
-                  <span>Telepon</span>
-                  <b>:</b>
-                  <strong>{student.phone || 'Belum diisi'}</strong>
-                </p>
-                <p>
-                  <span>WhatsApp</span>
-                  <b>:</b>
-                  <strong>{student.whatsapp || 'Belum diisi'}</strong>
-                </p>
-                <span
-                  className={`status status-${student.status} profile-status`}
-                >
-                  {student.status}
-                </span>
+                {([['Email', student.email], ['Nomor telepon', student.phone], ['WhatsApp', student.whatsapp], ['Username Telegram', student.telegram_username]] as const).map(([label, value]) => <p key={label}><span>{label}</span><b>:</b><strong>{value || 'Belum diisi'}</strong></p>)}
+                <span className={`status status-${student.status} profile-status`}>{student.status}</span>
               </div>
             </div>
             <hr />
             <div className="profile-grid">
-              <div>
-                <span className="section-kicker">PROGRAM AKTIF</span>
-                <p
-                  className={`active-program-name${
-                    student.active_program?.program_name ? '' : ' is-empty'
-                  }`}
-                >
-                  <strong>
-                    {student.active_program?.program_name ||
-                      'Belum ada program aktif'}
-                  </strong>
-                </p>
-                <div className="program-summary">
-                  <p>
-                    <span>Kelas</span>
-                    <b>:</b>
-                    <strong>
-                      {student.active_program?.class_name || 'Belum tersedia'}
-                    </strong>
-                  </p>
-                  <p>
-                    <span>Tahun ajaran</span>
-                    <b>:</b>
-                    <strong>
-                      {student.active_program?.academic_year ||
-                        'Belum tersedia'}
-                    </strong>
-                  </p>
-                </div>
-              </div>
+              <div><span className="section-kicker">ALAMAT SISWA</span>{([['Alamat lengkap', student.address?.line], ['RT / RW', student.address ? `${student.address.rt || '—'} / ${student.address.rw || '—'}` : null], ['Desa/Kelurahan', student.address?.village], ['Kecamatan', student.address?.district], ['Kota/Kabupaten', student.address?.city_regency], ['Provinsi', student.address?.province], ['Kode Pos', student.address?.postal_code]] as const).map(([label, value]) => <p key={label}><span>{label}</span><b>:</b><strong>{value || 'Belum diisi'}</strong></p>)}</div>
+              <div><span className="section-kicker">DATA FISIK</span>{([['Tinggi badan', student.physical?.height_cm ? `${student.physical.height_cm} cm` : null], ['Berat badan', student.physical?.weight_kg ? `${student.physical.weight_kg} kg` : null], ['Jumlah saudara', student.physical?.sibling_count], ['Anak ke-', student.physical?.birth_order]] as const).map(([label, value]) => <p key={label}><span>{label}</span><b>:</b><strong>{value ?? 'Belum diisi'}</strong></p>)}</div>
+            </div>
+            <hr />
+            <div className="profile-grid">
+              <div><span className="section-kicker">DATA ORANG TUA / WALI</span>{(student.parents || []).map((parent) => <div key={parent.id || parent.role} className="parent-summary"><h3>{parent.role === 'father' ? 'Ayah' : parent.role === 'mother' ? 'Ibu' : 'Wali'} — {parent.fullName}</h3><p><span>NIK</span><b>:</b><strong>{parent.nik || 'Belum diisi'}</strong></p><p><span>Telepon</span><b>:</b><strong>{parent.phone || 'Belum diisi'}</strong></p><p><span>Pendidikan</span><b>:</b><strong>{parent.educationOther || parent.education || 'Belum diisi'}</strong></p><p><span>Pekerjaan</span><b>:</b><strong>{parent.occupationOther || parent.occupation || 'Belum diisi'}</strong></p><p><span>Penghasilan</span><b>:</b><strong>{parent.monthlyIncome != null ? `Rp ${parent.monthlyIncome.toLocaleString('id-ID')}` : 'Belum diisi'}</strong></p></div>)}</div>
+              <div><span className="section-kicker">RIWAYAT PENDIDIKAN</span>{student.education_histories?.length ? student.education_histories.map((education) => <div className="parent-summary" key={education.id}><h3>{education.level}</h3><p><span>Institusi</span><b>:</b><strong>{education.institutionName}</strong></p><p><span>Kota / Provinsi</span><b>:</b><strong>{[education.cityRegency, education.province].filter(Boolean).join(' / ') || 'Belum diisi'}</strong></p><p><span>Tahun</span><b>:</b><strong>{education.graduationYear || 'Belum diisi'}{education.degreeLevel ? ` (${education.degreeLevel})` : ''}</strong></p></div>) : <p className="muted">Belum ada riwayat pendidikan.</p>}</div>
+            </div>
+            <hr />
+            <div className="profile-grid">
+              <div><span className="section-kicker">PROGRAM AKTIF</span><p className={`active-program-name${student.active_program?.program_name ? '' : ' is-empty'}`}><strong>{student.active_program?.program_name || 'Belum ada program aktif'}</strong></p><div className="program-summary"><p><span>Kelas</span><b>:</b><strong>{student.active_program?.class_name || 'Belum tersedia'}</strong></p><p><span>Tahun ajaran</span><b>:</b><strong>{student.active_program?.academic_year || 'Belum tersedia'}</strong></p></div></div>
             </div>
           </section>
           <section className="student-card">

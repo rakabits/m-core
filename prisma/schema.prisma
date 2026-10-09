@@ -1,5 +1,5 @@
 // =============================================================================
-// M-CORE â€” Prisma Schema
+// M-CORE Ã¢â‚¬â€ Prisma Schema
 // =============================================================================
 //
 // Dokumen ini adalah implementasi DATABASE.md ke dalam Prisma ORM.
@@ -50,7 +50,7 @@ enum PaymentMethod {
 
 /// Jenis kelamin siswa.
 /// Nilai: male | female
-/// Referensi: DATABASE.md §8
+/// Referensi: DATABASE.md Â§8
 enum Gender {
   male
   female
@@ -60,7 +60,7 @@ enum Gender {
 /// ACTIVE = masih mengikuti program
 /// ALUMNI = telah menyelesaikan perjalanan pendidikan
 /// INACTIVE = tidak sedang aktif, belum alumni
-/// Referensi: DATABASE.md Â§9, BUSINESS_RULES.md Â§10-13
+/// Referensi: DATABASE.md Ã‚Â§9, BUSINESS_RULES.md Ã‚Â§10-13
 enum StudentStatus {
   active
   alumni
@@ -70,10 +70,10 @@ enum StudentStatus {
 /// Status riwayat program siswa.
 /// ENROLLED = sedang aktif di program ini (program aktif)
 /// COMPLETED = selesai dari program/kelas ini
-/// TRANSFERRED = pindah ke program lain (lihat BUSINESS_RULES.md Â§22)
+/// TRANSFERRED = pindah ke program lain (lihat BUSINESS_RULES.md Ã‚Â§22)
 /// DROPPED = berhenti
 /// CANCELLED = dibatalkan administratif
-/// Referensi: DATABASE.md Â§16, BUSINESS_RULES.md Â§16-25
+/// Referensi: DATABASE.md Ã‚Â§16, BUSINESS_RULES.md Ã‚Â§16-25
 enum ProgramHistoryStatus {
   enrolled
   completed
@@ -88,15 +88,17 @@ enum ProgramHistoryStatus {
 // Tabel master identitas siswa. Satu siswa hanya boleh memiliki satu record.
 // student_id adalah identitas internal M-CORE yang TIDAK BOLEH berubah.
 //
-// PRINSIP UTAMA: ONE STUDENT â€” ONE IDENTITY
-// Referensi: DATABASE.md Â§6, Â§7, BUSINESS_RULES.md Â§4-5
+// PRINSIP UTAMA: ONE STUDENT Ã¢â‚¬â€ ONE IDENTITY
+// Referensi: DATABASE.md Ã‚Â§6, Ã‚Â§7, BUSINESS_RULES.md Ã‚Â§4-5
 // =============================================================================
 model Student {
   /// ID internal M-CORE. UUID, tidak boleh berubah sepanjang lifecycle siswa.
   /// Jangan pernah menggunakan NIK, email, atau nomor HP sebagai student_id.
   id String @id @default(uuid()) @map("student_id")
 
-  studentNumber Int @unique @default(autoincrement()) @map("student_number")
+  studentNumber Int     @unique @default(autoincrement()) @map("student_number")
+  mtsStudentId  String? @unique @map("mts_student_id") @db.VarChar(50)
+  maStudentId   String? @unique @map("ma_student_id") @db.VarChar(50)
 
   /// URL publik foto profil siswa yang disimpan di Cloudinary.
   photoUrl String? @map("photo_url") @db.VarChar(500)
@@ -118,20 +120,38 @@ model Student {
 
   /// Nomor Induk Kependudukan (16 digit).
   /// UNIQUE jika tersedia, NULL jika belum ada.
-  /// JANGAN simpan sebagai integer â€” NIK bisa memiliki leading zero.
-  /// Referensi: DATABASE.md Â§10, BUSINESS_RULES.md Â§6-7
-  nik String? @unique @db.VarChar(16)
+  /// JANGAN simpan sebagai integer Ã¢â‚¬â€ NIK bisa memiliki leading zero.
+  /// Referensi: DATABASE.md Ã‚Â§10, BUSINESS_RULES.md Ã‚Â§6-7
+  nik              String? @unique @db.VarChar(16)
+  nisn             String? @unique @db.VarChar(20)
+  familyCardNumber String? @map("family_card_number") @db.VarChar(20)
+  passportNumber   String? @map("passport_number") @db.VarChar(30)
 
   /// Email siswa. UNIQUE (case-insensitive) jika tersedia.
   /// Perbandingan email harus case-insensitive (lihat index di bawah).
-  /// Referensi: DATABASE.md Â§11
+  /// Referensi: DATABASE.md Ã‚Â§11
   email String? @db.VarChar(150)
 
   /// Nomor HP utama. Opsional.
   phone String? @db.VarChar(20)
 
   /// Nomor WhatsApp. Opsional (bisa sama atau berbeda dengan phone).
-  whatsapp String? @db.VarChar(20)
+  whatsapp         String? @db.VarChar(20)
+  telegramUsername String? @map("telegram_username") @db.VarChar(100)
+
+  addressLine String? @map("address_line") @db.VarChar(255)
+  addressRt   String? @map("address_rt") @db.VarChar(5)
+  addressRw   String? @map("address_rw") @db.VarChar(5)
+  village     String? @db.VarChar(100)
+  district    String? @db.VarChar(100)
+  cityRegency String? @map("city_regency") @db.VarChar(100)
+  province    String? @db.VarChar(100)
+  postalCode  String? @map("postal_code") @db.VarChar(10)
+
+  heightCm     Decimal? @map("height_cm") @db.Decimal(5, 2)
+  weightKg     Decimal? @map("weight_kg") @db.Decimal(5, 2)
+  siblingCount Int?     @map("sibling_count")
+  birthOrder   Int?     @map("birth_order")
 
   /// Status siswa saat ini.
   /// Default: ACTIVE saat pertama didaftarkan.
@@ -144,21 +164,47 @@ model Student {
   /// Timestamp diperbarui. Harus diupdate setiap kali record berubah.
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  programHistories  StudentProgramHistory[]
-  classEnrollments  ClassEnrollment[]
-  attendanceRecords AttendanceRecord[]
-  grades            Grade[]
-  guardianConfig    StudentGuardian?
-  applicants        Applicant[]
-  userProfile       UserProfile?
-  parents           StudentParent[]
+  programHistories   StudentProgramHistory[]
+  classEnrollments   ClassEnrollment[]
+  attendanceRecords  AttendanceRecord[]
+  grades             Grade[]
+  guardianConfig     StudentGuardian?
+  applicants         Applicant[]
+  userProfile        UserProfile?
+  parents            StudentParent[]
+  educationHistories StudentEducationHistory[]
 
   // Indeks untuk performa query.
-  // Referensi: DATABASE.md Â§22
+  // Referensi: DATABASE.md Ã‚Â§22
   @@index([fullName])
   @@index([status])
   @@index([birthDate])
   @@map("students")
+}
+
+enum EducationHistoryLevel {
+  elementary
+  junior_high
+  senior_high
+  university
+}
+
+model StudentEducationHistory {
+  id              String                @id @default(uuid()) @map("education_history_id")
+  studentId       String                @map("student_id")
+  level           EducationHistoryLevel
+  institutionName String                @map("institution_name") @db.VarChar(150)
+  cityRegency     String?               @map("city_regency") @db.VarChar(100)
+  province        String?               @db.VarChar(100)
+  graduationYear  Int?                  @map("graduation_year")
+  degreeLevel     String?               @map("degree_level") @db.VarChar(10)
+  student         Student               @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@unique([studentId, level])
+  @@index([studentId])
+  @@map("student_education_histories")
 }
 
 enum ParentRole {
@@ -217,7 +263,7 @@ model StudentGuardian {
 //
 // Program yang sudah tidak digunakan TIDAK boleh dihapus.
 // Gunakan isActive = false untuk menonaktifkan.
-// Referensi: DATABASE.md Â§12-14
+// Referensi: DATABASE.md Ã‚Â§12-14
 // =============================================================================
 model Program {
   /// ID internal program.
@@ -262,23 +308,37 @@ model Program {
 /// Konfigurasi pendaftaran program untuk satu periode akademik.
 /// Satu program dapat dibuka kembali pada periode berbeda tanpa mengubah histori lama.
 model EnrollmentPeriod {
-  id              String                 @id @default(uuid()) @map("enrollment_period_id")
-  programId       String                 @map("program_id")
-  name            String                 @db.VarChar(150)
-  status          EnrollmentPeriodStatus @default(DRAFT)
-  registrationFee Int                    @map("registration_fee")
-  currency        String                 @default("IDR") @db.Char(3)
-  startsAt        DateTime               @map("starts_at") @db.Timestamptz()
-  endsAt          DateTime               @map("ends_at") @db.Timestamptz()
-  notes           String?                @db.Text
-  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamptz()
-  program         Program                @relation(fields: [programId], references: [id], onDelete: Restrict)
+  id              String                    @id @default(uuid()) @map("enrollment_period_id")
+  programId       String                    @map("program_id")
+  formTemplateId  String?                   @map("form_template_id")
+  name            String                    @db.VarChar(150)
+  status          EnrollmentPeriodStatus    @default(DRAFT)
+  registrationFee Int                       @map("registration_fee")
+  currency        String                    @default("IDR") @db.Char(3)
+  startsAt        DateTime                  @map("starts_at") @db.Timestamptz()
+  endsAt          DateTime                  @map("ends_at") @db.Timestamptz()
+  notes           String?                   @db.Text
+  createdAt       DateTime                  @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime                  @updatedAt @map("updated_at") @db.Timestamptz()
+  program         Program                   @relation(fields: [programId], references: [id], onDelete: Restrict)
+  formTemplate    RegistrationFormTemplate? @relation(fields: [formTemplateId], references: [id], onDelete: SetNull)
   applicants      Applicant[]
 
   @@index([programId, status])
   @@index([status, startsAt, endsAt])
+  @@index([formTemplateId])
   @@map("enrollment_periods")
+}
+
+model RegistrationFormTemplate {
+  id             String             @id @default(uuid()) @map("form_template_id")
+  name           String             @unique @db.VarChar(150)
+  selectedFields Json               @map("selected_fields")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime           @updatedAt @map("updated_at") @db.Timestamptz()
+  periods        EnrollmentPeriod[]
+
+  @@map("registration_form_templates")
 }
 
 // =============================================================================
@@ -331,7 +391,7 @@ model Applicant {
 //   2. Record baru dibuat untuk program/kelas berikutnya
 //   JANGAN overwrite record lama dengan data baru.
 //
-// Referensi: DATABASE.md Â§15-18, BUSINESS_RULES.md Â§16-25
+// Referensi: DATABASE.md Ã‚Â§15-18, BUSINESS_RULES.md Ã‚Â§16-25
 // =============================================================================
 model StudentProgramHistory {
   /// ID riwayat. UUID, primary key.
@@ -347,12 +407,14 @@ model StudentProgramHistory {
 
   /// Tahun akademik. Format: YYYY/YYYY. Contoh: "2024/2025", "2025/2026".
   /// Validasi format dilakukan di application layer dengan Zod.
-  /// Referensi: DATABASE.md Â§17
+  /// Referensi: DATABASE.md Ã‚Â§17
   academicYear String @map("academic_year") @db.VarChar(9)
 
   /// Level/jenjang dalam program. Opsional karena tidak semua program pakai sistem ini.
   /// Contoh MTs: "MTs" | Pra-Univ: "Persiapan" | Bahasa: "Turkish Language"
   level String? @db.VarChar(50)
+
+  country String? @db.VarChar(100)
 
   /// Nama kelas. Opsional.
   /// Contoh: "VII", "VIII", "IX", "Batch 1", "A2"
@@ -386,7 +448,7 @@ model StudentProgramHistory {
 
   // Unique constraint: satu siswa tidak boleh memiliki duplikasi history
   // untuk program dan tahun akademik yang sama.
-  // Referensi: DATABASE.md Â§21
+  // Referensi: DATABASE.md Ã‚Â§21
   @@unique([studentId, programId, academicYear], name: "uq_student_program_year")
   // Indeks untuk performa query.
   @@index([studentId])
