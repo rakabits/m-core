@@ -328,3 +328,11 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 .public-form .two-fields{gap:14px}
 .public-form .primary-button,.public-form .state.error{grid-column:1/-1}
 @media(max-width:600px){.public-form{grid-template-columns:1fr;gap:14px}.public-form>label,.public-form>label:nth-of-type(1),.public-form>label:nth-of-type(4),.public-form>label:nth-of-type(5),.public-form>label:nth-of-type(6),.public-form>label:nth-of-type(7),.public-form>label:nth-of-type(8),.public-form .primary-button,.public-form .state.error{grid-column:1}.public-form .two-fields{grid-template-columns:1fr;gap:14px}}
+
+/* Two-step registration wizard */
+.wizard-progress{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding:12px 14px;border:1px solid #ccece7;border-radius:12px;background:linear-gradient(135deg,#f0fcfa,#fbfffe);color:var(--teal-dark);font-size:12px}
+.wizard-progress strong{font-size:13px}.wizard-progress span{color:var(--muted);font-size:11px}
+.public-form[data-step="1"]>label:nth-of-type(n+4),.public-form[data-step="1"]>.primary-button,.public-form[data-step="1"]>.detail-button{display:none}
+.public-form[data-step="2"]>label:nth-of-type(-n+3),.public-form[data-step="2"]>.two-fields:first-of-type,.public-form[data-step="2"]>.two-fields:nth-of-type(2){display:none}
+.public-form[data-step="2"]>.detail-button{display:block;grid-column:1}.public-form[data-step="2"]>.primary-button{grid-column:2}
+@media(max-width:600px){.wizard-progress{align-items:flex-start;flex-direction:column;gap:4px}.public-form[data-step="2"]>.detail-button,.public-form[data-step="2"]>.primary-button{grid-column:1}}
