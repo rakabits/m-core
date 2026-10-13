@@ -357,6 +357,7 @@ model Applicant {
   studentPhone       String?          @map("student_phone") @db.VarChar(30)
   studentWhatsapp    String?          @map("student_whatsapp") @db.VarChar(30)
   parentPhone        String?          @map("parent_phone") @db.VarChar(30)
+  educationHistory   Json?            @map("education_history")
   programId          String           @map("program_id")
   enrollmentPeriodId String           @map("enrollment_period_id")
   studentId          String?          @map("student_id")
