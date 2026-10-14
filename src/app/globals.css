@@ -265,8 +265,8 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 /* Public registration form � focused, premium and responsive */
 .public-registration{min-height:100vh;padding:clamp(24px,6vw,76px) 18px;background:radial-gradient(circle at 12% 0%,#dff8f3 0,transparent 34%),linear-gradient(145deg,#f8fafc 0%,#eef7f6 100%);display:flex;justify-content:center;align-items:flex-start}
 .public-registration-card{width:min(100%,760px);background:rgba(255,255,255,.96);border:1px solid rgba(203,213,225,.9);border-radius:24px;padding:clamp(24px,5vw,46px);box-shadow:0 24px 70px rgba(15,23,42,.12);position:relative;overflow:hidden}
-.public-registration-card:before{content:"";position:absolute;inset:0 0 auto;height:5px;background:linear-gradient(90deg,var(--teal),#67d6c5,var(--gold))}
-.public-registration-card .eyebrow{margin-bottom:12px}.public-registration-card h1{margin:0;color:var(--ink);font-size:clamp(28px,4vw,40px);letter-spacing:-.055em;line-height:1.08}.program-summary{display:grid;grid-template-columns:auto 1fr;gap:5px 12px;margin:24px 0 30px;padding:18px 20px;border:1px solid #ccece7;border-radius:14px;background:linear-gradient(135deg,#f0fcfa,#fbfffe)}.program-summary span{grid-row:span 2;align-self:start;border-radius:999px;background:#d9f7f1;color:var(--teal-dark);padding:7px 10px;font-size:10px;font-weight:850;letter-spacing:.08em}.program-summary strong{color:var(--ink);font-size:15px}.program-summary small{color:var(--muted);font-size:11px}.public-form{display:grid;gap:18px}.public-form label{display:grid;gap:8px;color:#475569;font-size:11px;font-weight:750;letter-spacing:.01em}.public-form input,.public-form select{width:100%;min-height:46px;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;color:var(--ink);font-size:13px;background:#fff;transition:border-color .2s,box-shadow .2s,transform .2s}.public-form input:focus,.public-form select:focus{border-color:var(--teal);box-shadow:0 0 0 4px rgba(24,168,155,.13);transform:translateY(-1px)}.two-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.public-form .primary-button{width:100%;min-height:48px;margin-top:5px;border-radius:11px;font-size:13px}.public-registration .success-panel{padding:25px;border-radius:14px;background:#e9faf3;border:1px solid #b9ead7;color:var(--success-dark)}.public-registration .success-panel h2{margin:0 0 8px;color:var(--success-dark);font-size:20px}.public-registration .success-panel p{margin:0;font-size:13px}.public-registration>.public-registration-card>p:not(.eyebrow){color:var(--muted)}.public-registration .state.error{margin:0;padding:12px 14px;border:1px solid #f3caca;background:#fff5f5;border-radius:10px;font-size:12px}.public-registration input::placeholder{color:#94a3b8}@media(max-width:600px){.public-registration{padding:14px 10px}.public-registration-card{padding:28px 18px 22px;border-radius:18px}.program-summary{grid-template-columns:1fr;gap:8px;margin-bottom:24px}.program-summary span{width:max-content}.two-fields{grid-template-columns:1fr;gap:18px}.public-form{gap:16px}}
+.submitted-registration-details{display:grid;gap:10px;margin:20px 0;padding:16px;border:1px solid #b9ead7;border-radius:12px;background:rgba(255,255,255,.65);text-align:left}.submitted-registration-details p{display:flex;justify-content:space-between;gap:16px;margin:0!important}.submitted-registration-details span{color:#52706a}.submitted-registration-details strong{text-align:right;color:var(--success-dark)}
+.public-registration-card .eyebrow{margin-bottom:12px}.public-registration-card h1{margin:0;color:var(--ink);font-size:clamp(28px,4vw,40px);letter-spacing:-.055em;line-height:1.08}.public-form{display:grid;gap:18px}.public-form label{display:grid;gap:8px;color:#475569;font-size:11px;font-weight:750}.public-form input,.public-form select{width:100%;min-height:46px;padding:12px 14px;border:1px solid #cbd5e1;border-radius:10px;color:var(--ink);font-size:13px;background:#fff}.two-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.public-form .primary-button{width:100%;min-height:48px;margin-top:5px;border-radius:11px;font-size:13px}.public-registration .success-panel{padding:25px;border-radius:14px;background:#e9faf3;border:1px solid #b9ead7;color:var(--success-dark)}.public-registration .success-panel h2{margin:0 0 8px;color:var(--success-dark);font-size:20px}.public-registration .success-panel p{margin:0 0 8px;font-size:13px}.public-registration .whatsapp-confirmation-button{display:flex;align-items:center;justify-content:center;text-decoration:none;margin:18px auto 0;max-width:360px}.public-registration> .public-registration-card>p:not(.eyebrow){color:var(--muted)}.public-registration .state.error{margin:0;padding:12px 14px;border:1px solid #f3caca;background:#fff5f5;border-radius:10px;font-size:12px}.public-registration input::placeholder{color:#94a3b8}@media(max-width:600px){.public-registration{padding:14px 10px}.public-registration-card{padding:28px 18px 22px;border-radius:18px}.two-fields{grid-template-columns:1fr;gap:18px}.public-form{gap:16px}}
 
 /* Enrollment table: keep the card within the page and use controlled horizontal scrolling */
 .enrollment-data-page{min-width:0;overflow:hidden}.enrollment-data-page .enrollment-table-card{min-width:0;overflow:hidden}.enrollment-data-page .enrollment-table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}.enrollment-data-page .enrollment-table{width:max-content;min-width:100%;table-layout:fixed;font-size:10pt}.enrollment-data-page .enrollment-table th,.enrollment-data-page .enrollment-table td{font-size:10pt;line-height:1.25;padding:9px 10px;vertical-align:middle;white-space:normal;overflow-wrap:anywhere}.enrollment-data-page .enrollment-table th{font-weight:800}.enrollment-data-page .enrollment-table td small{display:block;font-size:9pt;color:var(--muted);margin-top:3px}.enrollment-data-page .enrollment-table th:nth-child(1){width:145px}.enrollment-data-page .enrollment-table th:nth-child(2){width:130px}.enrollment-data-page .enrollment-table th:nth-child(3){width:105px}.enrollment-data-page .enrollment-table th:nth-child(4){width:125px}.enrollment-data-page .enrollment-table th:nth-child(5){width:105px}.enrollment-data-page .enrollment-table th:nth-child(6){width:175px}.enrollment-data-page .enrollment-table th:nth-child(7),.enrollment-data-page .enrollment-table th:nth-child(8),.enrollment-data-page .enrollment-table th:nth-child(9){width:115px}.enrollment-data-page .enrollment-table th:nth-child(10){width:145px}.enrollment-data-page .enrollment-table th:nth-child(11){width:135px}.enrollment-data-page .enrollment-table th:nth-child(12){width:100px}.enrollment-data-page .enrollment-table th:nth-child(13){width:150px}.enrollment-data-page .enrollment-table a{font-size:10pt;overflow-wrap:anywhere}.enrollment-data-page .enrollment-table .approval-actions button{font-size:9pt;padding:5px 7px}
@@ -319,23 +319,36 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 
 .template-preview{margin-top:4px;padding:16px 18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}.template-preview .section-kicker{display:block;margin-bottom:12px}.template-preview-required,.template-preview-group{margin:0 0 14px}.template-preview-required:last-child,.template-preview-group:last-child{margin-bottom:0}.template-preview h4{margin:0 0 6px;color:#334155;font-size:12px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}.template-preview ul{display:grid;gap:3px;margin:0;padding:0;list-style:none}.template-preview li{position:relative;padding-left:14px;color:#475569;font-size:13px;line-height:1.4}.template-preview li::before{content:'•';position:absolute;left:0;color:#2563eb;font-weight:800}
 
-/* Compact public registration form */
-.public-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px}
-.public-form>label{min-width:0}
-.public-form>label:nth-of-type(1),.public-form>label:nth-of-type(4),.public-form>label:nth-of-type(5),.public-form>label:nth-of-type(6),.public-form>label:nth-of-type(7),.public-form>label:nth-of-type(8){grid-column:1/-1}
-.public-form label{gap:6px}
-.public-form input,.public-form select{min-height:42px;padding:10px 12px}
-.public-form .two-fields{gap:14px}
-.public-form .primary-button,.public-form .state.error{grid-column:1/-1}
-@media(max-width:600px){.public-form{grid-template-columns:1fr;gap:14px}.public-form>label,.public-form>label:nth-of-type(1),.public-form>label:nth-of-type(4),.public-form>label:nth-of-type(5),.public-form>label:nth-of-type(6),.public-form>label:nth-of-type(7),.public-form>label:nth-of-type(8),.public-form .primary-button,.public-form .state.error{grid-column:1}.public-form .two-fields{grid-template-columns:1fr;gap:14px}}
+/* Compact public registration form - layout handled by wizard CSS below */
 
 /* Two-step registration wizard */
 .wizard-progress{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;padding:12px 14px;border:1px solid #ccece7;border-radius:12px;background:linear-gradient(135deg,#f0fcfa,#fbfffe);color:var(--teal-dark);font-size:12px}
 .wizard-progress strong{font-size:13px}.wizard-progress span{color:var(--muted);font-size:11px}
-.public-form[data-step="1"]>label:nth-of-type(n+4),.public-form[data-step="1"]>.detail-button{display:none}
-.public-form[data-step="2"]>label:nth-of-type(-n+3),.public-form[data-step="2"]>.two-fields:first-of-type,.public-form[data-step="2"]>.two-fields:nth-of-type(2){display:none}
-.public-form[data-step="2"]>.detail-button{display:block;grid-column:1}.public-form[data-step="2"]>.primary-button{grid-column:2}
-@media(max-width:600px){.wizard-progress{align-items:flex-start;flex-direction:column;gap:4px}.public-form[data-step="2"]>.detail-button,.public-form[data-step="2"]>.primary-button{grid-column:1}}
+.public-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px;align-items:start}
+.public-form .wizard-progress,.public-form .form-span-full,.public-form .form-category-heading,.public-form .registration-field-group,.public-form .education-history-fieldset,.public-form .form-actions,.public-form .state{grid-column:1/-1}
+.public-form .two-fields{display:contents}
+.public-form .two-fields>label{grid-column:auto;min-width:0}
+.public-form input,.public-form select{min-height:42px;padding:10px 12px}
+.public-form label{gap:6px;min-width:0}
+/* form-category-heading */
+.form-category-heading{padding:14px 18px;border:1px solid #ccece7;border-radius:12px;background:linear-gradient(135deg,#f0fcfa,#fbfffe);margin-bottom:4px}
+.form-category-heading .section-kicker{display:block;margin-bottom:4px}
+.form-category-heading h3{margin:0;font-size:14px;color:var(--ink)}
+/* field group fieldset */
+.registration-field-group{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 18px;padding:16px 18px;border:1px solid var(--line);border-radius:12px}
+.registration-field-group legend{grid-column:1/-1;padding:0 4px;color:var(--teal-dark);font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase}
+.registration-field-group label{min-width:0}
+/* form-actions navigation buttons */
+.form-actions{display:flex;gap:12px;padding-top:4px}
+.form-actions .primary-button{flex:1;min-height:46px}
+.form-actions .detail-button{min-height:46px;padding:0 22px}
+@media(max-width:700px){
+  .wizard-progress{align-items:flex-start;flex-direction:column;gap:4px}
+  .public-form{grid-template-columns:1fr;gap:14px}
+  .public-form .two-fields{display:grid;grid-template-columns:1fr;gap:14px}
+  .registration-field-group{grid-template-columns:1fr}
+  .form-actions{flex-direction:column-reverse}
+}
 
 /* Registration settings: compact responsive layout */
 .registration-summary-card{display:flex;align-items:center;justify-content:space-between;gap:24px}
@@ -406,7 +419,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
   .academic-page .academic-grid>.registration-summary-card:nth-child(2){margin:0!important}
   .academic-page .academic-grid>.registration-summary-card:nth-child(2){margin-bottom:12px!important}
 }
-/* Registration action panel: side-by-side desktop, stacked mobile */
+.registration-number{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;align-items:center;margin:18px 0 22px;padding:14px 16px;border:1px solid #bfe8e1;border-radius:14px;background:linear-gradient(135deg,#effcf9,#f8fffe)}.registration-number span{grid-row:span 2;color:var(--teal-dark);font-size:10px;font-weight:850;letter-spacing:.1em}.registration-number strong{color:var(--ink);font-size:17px;letter-spacing:.04em}.registration-number small{color:var(--muted);font-size:11px}
 @media(min-width:701px){
   .academic-page .academic-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0}
   .academic-page .academic-grid>.registration-summary-card:nth-child(1),
@@ -472,3 +485,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
     margin:0;
   }
 }
+.template-history-link{display:inline-flex;border:0;background:transparent;color:var(--teal);padding:8px 0 0;font-size:12px;font-weight:750;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.template-history-link:hover{color:var(--teal-dark)}.template-history-list{display:grid;gap:10px}.template-history-item{display:flex;align-items:center;justify-content:space-between;width:100%;border:1px solid var(--line);border-radius:12px;background:#fbfdfd;padding:14px 16px;text-align:left;color:var(--ink);cursor:pointer;transition:.2s}.template-history-item:hover{border-color:#9adfd7;background:#effaf8;transform:translateY(-1px)}.template-history-item span:first-child{display:grid;gap:5px}.template-history-item strong{font-size:13px}.template-history-item small{color:var(--muted);font-size:11px}.template-history-item>span:last-child{color:var(--teal);font-size:20px}.template-history-modal{max-width:560px}
+.template-history-search{width:100%;margin:18px 0;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:12px;outline:0}.template-history-search:focus{border-color:var(--teal);box-shadow:0 0 0 3px #18a89b18}.template-history-pagination{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);color:var(--muted);font-size:11px}.template-history-pagination>div{display:flex;gap:5px}.template-history-pagination .detail-button:disabled{color:#b7c0d0;cursor:not-allowed}
+.template-picker-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.template-picker-toolbar .template-picker-title{margin:0}.template-picker-toolbar .detail-button{padding:6px 0}
+.form-category-heading{margin:24px 0 12px;padding:14px 16px;border:1px solid #cceee9;border-radius:12px;background:#f0fdfa}.form-category-heading h3{margin:5px 0;color:var(--ink);font-size:14px}.form-category-heading p{margin:0;color:var(--muted);font-size:11px}

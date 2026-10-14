@@ -187,6 +187,9 @@ enum EducationHistoryLevel {
   junior_high
   senior_high
   university
+  university_s1
+  university_s2
+  university_s3
 }
 
 model StudentEducationHistory {
@@ -364,6 +367,7 @@ model Applicant {
   paymentProofUrl    String?          @map("payment_proof_url") @db.VarChar(500)
   paymentMethod      PaymentMethod?   @map("payment_method")
   status             ApplicantStatus  @default(PENDING)
+  submittedAt        DateTime?        @map("submitted_at") @db.Timestamptz()
   rejectionReason    String?          @map("rejection_reason") @db.VarChar(500)
   reviewedAt         DateTime?        @map("reviewed_at") @db.Timestamptz()
   createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz()
