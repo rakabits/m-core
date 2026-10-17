@@ -1,9 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Prisma, StudentStatus } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { prisma } from '@/core/database/prisma';
+import { passwordHash } from '@/lib/auth/local';
 import { StudentCreateInput, StudentUpdateInput } from './validation';
 import type { ScopeInput } from '@/modules/rbac/authorization';
 import { studentScopeWhere } from './scope';
+
+const DEFAULT_ACCOUNT_PASSWORD = 'Mumtaza2008';
 
 const baseSelect = { id: true, studentNumber: true, mtsStudentId: true, maStudentId: true, photoUrl: true, photoPublicId: true, fullName: true, gender: true, birthPlace: true, birthDate: true, status: true, nik: true, nisn: true, familyCardNumber: true, passportNumber: true, email: true, phone: true, whatsapp: true, telegramUsername: true, addressLine: true, addressRt: true, addressRw: true, village: true, district: true, cityRegency: true, province: true, postalCode: true, heightCm: true, weightKg: true, siblingCount: true, birthOrder: true, createdAt: true, updatedAt: true, parents: true, guardianConfig: { include: { otherParent: true } }, educationHistories: true, programHistories: { where: { status: 'enrolled' }, include: { program: { select: { id: true, programName: true } } }, orderBy: { createdAt: 'desc' }, take: 1 } } as const;
 const educationLevelMap:Record<string,'elementary'|'junior_high'|'senior_high'|'university_s1'|'university_s2'|'university_s3'>={educationSd:'elementary',educationSmp:'junior_high',educationSma:'senior_high',educationS1:'university_s1',educationS2:'university_s2',educationS3:'university_s3'};
@@ -43,6 +47,7 @@ export async function createStudent(input: StudentCreateInput, actorId?: string)
     return await prisma.$transaction(async (tx) => {
       const student = await tx.student.create({ data: { fullName: input.fullName, gender: input.gender, birthPlace: input.birthPlace ?? null, birthDate: input.birthDate ?? null, nik: input.nik ?? null, mtsStudentId: input.mtsStudentId ?? null, maStudentId: input.maStudentId ?? null, nisn: input.nisn ?? null, familyCardNumber: input.familyCardNumber ?? null, passportNumber: input.passportNumber ?? null, email: input.email?.toLowerCase() ?? null, phone: input.phone ?? null, whatsapp: input.whatsapp ?? null, telegramUsername: input.telegramUsername ?? null, addressLine: input.addressLine ?? null, addressRt: input.addressRt ?? null, addressRw: input.addressRw ?? null, village: input.village ?? null, district: input.district ?? null, cityRegency: input.cityRegency ?? null, province: input.province ?? null, postalCode: input.postalCode ?? null, heightCm: input.heightCm ?? null, weightKg: input.weightKg ?? null, siblingCount: input.siblingCount ?? null, birthOrder: input.birthOrder ?? null, status: input.status as StudentStatus }, select: baseSelect });
       await saveParents(tx, student.id, input);
+      await tx.userProfile.create({ data: { authId: randomUUID(), email: student.email, passwordHash: passwordHash(DEFAULT_ACCOUNT_PASSWORD), studentId: student.id } });
       const profile = actorId ? await tx.userProfile.findUnique({ where: { authId: actorId }, select: { id: true } }) : null;
       await tx.auditLog.create({ data: { actorId: profile?.id ?? null, action: 'student.create', resource: 'student', resourceId: student.id, changes: { created: { fullName: student.fullName, status: student.status } } } });
       return tx.student.findUniqueOrThrow({ where: { id: student.id }, select: baseSelect });

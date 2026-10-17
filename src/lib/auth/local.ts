@@ -1,4 +1,4 @@
-﻿import { cookies } from 'next/headers';
+import { cookies } from 'next/headers';
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 import { prisma } from '@/core/database/prisma';
 
@@ -21,7 +21,7 @@ export async function authenticate(identifier: string, password: string) {
   const normalized = identifier.trim().toLowerCase();
   const numeric = /^\d+$/.test(normalized) ? Number(normalized) : undefined;
   const profile = await prisma.userProfile.findFirst({
-    where: { isActive: true, OR: [{ email: normalized }, ...(numeric !== undefined ? [{ student: { studentNumber: numeric } }] : []), { student: { nik: identifier.trim() } }] },
+    where: { isActive: true, OR: [{ email: normalized }, ...(numeric !== undefined ? [{ student: { studentNumber: numeric } }] : []), { student: { nik: identifier.trim() } }, { teacher: { employeeCode: identifier.trim().toUpperCase() } }] },
     select: { id: true, email: true, passwordHash: true },
   });
   if (!profile?.passwordHash || !verifyPassword(password, profile.passwordHash)) return null;

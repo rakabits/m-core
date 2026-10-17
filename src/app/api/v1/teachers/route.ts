@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'node:crypto';
 import { prisma } from '@/core/database/prisma';
+import { passwordHash } from '@/lib/auth/local';
 
+const DEFAULT_ACCOUNT_PASSWORD = 'Mumtaza2008';
 const teacherInclude = { assignments: true, educationHistories: true, spouseLinks: { include: { partnerTeacher: { select: { id: true, displayName: true, employeeCode: true } } } }, familyMembers: true, documentRecords: true } as const;
 
 export async function GET(request: NextRequest) {
@@ -17,7 +20,7 @@ export async function GET(request: NextRequest) {
     }
     const data = await prisma.teacher.findMany({
       where: q ? { OR: [{ displayName: { contains: q, mode: 'insensitive' } }, { employeeCode: { contains: q, mode: 'insensitive' } }] } : undefined,
-      select: { id: true, employeeCode: true, displayName: true, isActive: true, profile: true, address: true, employment: true },
+      select: { id: true, employeeCode: true, displayName: true, isActive: true, profile: true, address: true, employment: true, userProfileId: true },
       orderBy: { displayName: 'asc' },
     });
     return NextResponse.json({ success: true, data });
@@ -38,7 +41,13 @@ export async function POST(request: NextRequest) {
     const latest = await prisma.teacher.findFirst({ where: { employeeCode: { startsWith: 'G-' } }, orderBy: { employeeCode: 'desc' }, select: { employeeCode: true } });
     const nextNumber = latest?.employeeCode ? Number(latest.employeeCode.slice(2)) + 1 : 1;
     const employeeCode = `G-${String(nextNumber).padStart(4, '0')}`;
-    const teacher = await prisma.teacher.create({ data: { displayName: body.displayName.trim(), employeeCode, isActive: body.isActive ?? true, profile: body.profile as object ?? undefined, address: body.address as object ?? undefined, employment: body.employment as object ?? undefined, education: body.education as object ?? undefined, spouse: body.spouse as object ?? undefined, family: body.family as object ?? undefined, documents: body.documents as object ?? undefined }, include: teacherInclude });
+    const teacher = await prisma.$transaction(async (tx) => {
+      const profile = await tx.userProfile.create({ data: { authId: randomUUID(), email: null, passwordHash: passwordHash(DEFAULT_ACCOUNT_PASSWORD) } });
+      const created = await tx.teacher.create({ data: { displayName: body.displayName!.trim(), employeeCode, isActive: body.isActive ?? true, userProfileId: profile.id, profile: body.profile as object ?? undefined, address: body.address as object ?? undefined, employment: body.employment as object ?? undefined, education: body.education as object ?? undefined, spouse: body.spouse as object ?? undefined, family: body.family as object ?? undefined, documents: body.documents as object ?? undefined }, include: teacherInclude });
+      const teacherRole = await tx.role.findUnique({ where: { name: 'TEACHER' } });
+      if (teacherRole) await tx.userRoleAssignment.create({ data: { userId: profile.id, roleId: teacherRole.id } });
+      return created;
+    });
     return NextResponse.json({ success: true, data: teacher }, { status: 201 });
   } catch (error) { console.error('[teachers.create]', error); return NextResponse.json({ success: false, error: { message: error instanceof Error ? error.message : 'Gagal membuat data guru.' } }, { status: 400 }); }
 }
