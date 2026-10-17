@@ -6,6 +6,15 @@ const teacherInclude = { assignments: true, educationHistories: true, spouseLink
 export async function GET(request: NextRequest) {
   try {
     const q = request.nextUrl.searchParams.get('search')?.trim() ?? '';
+    const nik = request.nextUrl.searchParams.get('nik')?.trim() ?? '';
+    if (nik) {
+      const teachers = await prisma.teacher.findMany({ select: { id: true, displayName: true, employeeCode: true, profile: true } });
+      const match = teachers.find((teacher) => {
+        const profile = teacher.profile as Record<string, unknown> | null;
+        return profile?.nik === nik;
+      });
+      return NextResponse.json({ success: true, available: !match, data: match ?? null });
+    }
     const data = await prisma.teacher.findMany({
       where: q ? { OR: [{ displayName: { contains: q, mode: 'insensitive' } }, { employeeCode: { contains: q, mode: 'insensitive' } }] } : undefined,
       select: { id: true, employeeCode: true, displayName: true, isActive: true, profile: true, address: true, employment: true },
@@ -17,8 +26,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json() as { displayName?: string; isActive?: boolean; profile?: unknown; address?: unknown; employment?: unknown; education?: unknown; spouse?: unknown; family?: unknown; documents?: unknown };
+    const body = await request.json() as { displayName?: string; isActive?: boolean; profile?: Record<string, unknown>; address?: unknown; employment?: unknown; education?: unknown; spouse?: unknown; family?: unknown; documents?: unknown };
     if (!body.displayName?.trim()) return NextResponse.json({ success: false, error: { message: 'Nama lengkap guru wajib diisi.' } }, { status: 422 });
+    const nik = String(body.profile?.nik ?? '').trim();
+    if (nik) {
+      const teachers = await prisma.teacher.findMany({ select: { profile: true } });
+      if (teachers.some((teacher) => (teacher.profile as Record<string, unknown> | null)?.nik === nik)) {
+        return NextResponse.json({ success: false, error: { message: 'NIK sudah terdaftar pada Daftar Teacher.' } }, { status: 409 });
+      }
+    }
     const latest = await prisma.teacher.findFirst({ where: { employeeCode: { startsWith: 'G-' } }, orderBy: { employeeCode: 'desc' }, select: { employeeCode: true } });
     const nextNumber = latest?.employeeCode ? Number(latest.employeeCode.slice(2)) + 1 : 1;
     const employeeCode = `G-${String(nextNumber).padStart(4, '0')}`;

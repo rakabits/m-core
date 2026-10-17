@@ -119,6 +119,108 @@ export default function MasterTeacherPage() {
     assignments?: { [idx: number]: File };
     educations?: { [idx: number]: File };
   }>({});
+  const [selectedTeacher, setSelectedTeacher] = useState<Record<string, unknown> | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
+  const [nikStatus, setNikStatus] = useState<'idle' | 'checking' | 'available' | 'duplicate'>('idle');
+  const [stepWarning, setStepWarning] = useState('');
+
+  const validateStep = (currentStep: number) => {
+    if (currentStep === 0) {
+      const requiredFields: Array<[string, string]> = [
+        ['Nama lengkap', form.displayName], ['Jenis kelamin', form.gender], ['Tempat lahir', form.birthPlace],
+        ['Tanggal lahir', form.birthDate], ['NIK', form.nik], ['Nomor KK', form.familyCardNumber],
+        ['Email aktif', form.email], ['Nomor HP', form.phone], ['Nomor WhatsApp', form.whatsapp],
+        ['Status pernikahan', form.maritalStatus], ['Status guru', form.status]
+      ];
+      if (form.maritalStatus === 'MARRIED') requiredFields.push(['Jumlah anak', form.childrenCount]);
+      const missing = requiredFields.find(([, fieldValue]) => !fieldValue.trim());
+      if (missing) return `${missing[0]} pada Profil Guru wajib diisi.`;
+      if (!/^\d{16}$/.test(form.nik)) return 'NIK harus terdiri dari 16 digit angka.';
+      if (!/^\d{16}$/.test(form.familyCardNumber)) return 'Nomor KK harus terdiri dari 16 digit angka.';
+      if (nikStatus === 'duplicate') return 'NIK sudah terdaftar pada Daftar Teacher.';
+      if (nikStatus === 'checking') return 'Tunggu sampai pemeriksaan NIK selesai.';
+    }
+    return '';
+  };
+
+  const goToStep = (nextStep: number) => {
+    const warning = validateStep(step);
+    if (warning) {
+      setStepWarning(warning);
+      window.setTimeout(() => setStepWarning(''), 3500);
+      return;
+    }
+    setStep(nextStep);
+  };
+
+  useEffect(() => {
+    const nik = form.nik.trim();
+    if (nik.length !== 16) {
+      setNikStatus('idle');
+      return;
+    }
+    let cancelled = false;
+    setNikStatus('checking');
+    fetch(`/api/v1/teachers?nik=${encodeURIComponent(nik)}`, { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((json) => {
+        if (!cancelled) setNikStatus(json.success && json.available ? 'available' : 'duplicate');
+      })
+      .catch(() => {
+        if (!cancelled) setNikStatus('idle');
+      });
+    return () => { cancelled = true; };
+  }, [form.nik]);
+
+  const openTeacherDetail = async (teacherId: string) => {
+    try {
+      const response = await fetch(`/api/v1/teachers/${teacherId}`, { cache: 'no-store' });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error?.message ?? 'Gagal memuat detail guru.');
+      setSelectedTeacher(json.data);
+      setDetailOpen(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat detail guru.');
+    }
+  };
+
+  const editTeacher = async (teacherId: string) => {
+    try {
+      const response = await fetch(`/api/v1/teachers/${teacherId}`, { cache: 'no-store' });
+      const json = await response.json();
+      if (!response.ok || !json.success) throw new Error(json.error?.message ?? 'Gagal memuat data guru.');
+      const teacher = json.data;
+      const profile = teacher.profile ?? {};
+      const address = teacher.address ?? {};
+      const employment = teacher.employment ?? {};
+      setEditingTeacherId(teacher.id);
+      setForm({
+        ...empty,
+        employeeCode: teacher.employeeCode ?? '',
+        displayName: teacher.displayName ?? '',
+        gender: profile.gender ?? empty.gender,
+        birthPlace: profile.birthPlace ?? '',
+        birthDate: profile.birthDate ?? '',
+        nik: profile.nik ?? '',
+        familyCardNumber: profile.familyCardNumber ?? '',
+        email: profile.email ?? '', phone: profile.phone ?? '', whatsapp: profile.whatsapp ?? '',
+        maritalStatus: profile.maritalStatus ?? 'SINGLE', childrenCount: String(profile.childrenCount ?? 0),
+        status: teacher.isActive ? 'ACTIVE' : 'INACTIVE',
+        address: address.address ?? '', village: address.village ?? '', rt: address.rt ?? '', rw: address.rw ?? '',
+        district: address.district ?? '', city: address.city ?? '', province: address.province ?? '', postalCode: address.postalCode ?? '',
+        employmentStatus: employment.employmentStatus ?? 'PERMANENT', employmentStartedAt: employment.employmentStartedAt ?? '',
+        assignments: teacher.assignments?.length ? teacher.assignments.map((item: Record<string, unknown>) => ({ unit: String(item.unit ?? ''), position: String(item.position ?? ''), startedAt: String(item.startedAt ?? '').slice(0, 10), endedAt: item.endedAt ? String(item.endedAt).slice(0, 10) : '', notes: String(item.notes ?? ''), documentFileName: '' })) : empty.assignments,
+        educations: teacher.educationHistories?.length ? teacher.educationHistories.map((item: Record<string, unknown>) => ({ level: String(item.level ?? 'S1'), institutionName: String(item.institutionName ?? ''), studyProgram: String(item.studyProgram ?? ''), institutionCity: String(item.city ?? ''), startedYear: String(item.startedYear ?? ''), graduatedYear: String(item.graduatedYear ?? ''), status: String(item.status ?? 'GRADUATED'), notes: String(item.notes ?? ''), certificateFileName: '' })) : empty.educations,
+        spouseIsStaff: 'false', spousePartnerId: '', spouseRelationship: 'HUSBAND', spouseManualName: '', fatherName: '', motherName: '', motherNik: '', motherPhone: '', ktpFile: '', kkFile: '', employmentDocFile: '', otherDocFile: ''
+      });
+      setStep(0);
+      setError('');
+      setOpen(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memuat data guru.');
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -142,6 +244,18 @@ export default function MasterTeacherPage() {
     setSaving(true);
     setError('');
     try {
+      const requiredProfileFields: Array<[string, string]> = [
+        ['Nama lengkap', form.displayName], ['Tempat lahir', form.birthPlace], ['Tanggal lahir', form.birthDate],
+        ['NIK', form.nik], ['Nomor KK', form.familyCardNumber], ['Email', form.email], ['Nomor HP', form.phone],
+        ['Nomor WhatsApp', form.whatsapp], ['Jenis kelamin', form.gender], ['Status pernikahan', form.maritalStatus]
+      ];
+      const missingField = requiredProfileFields.find(([, fieldValue]) => !fieldValue.trim());
+      if (missingField) throw new Error(`${missingField[0]} pada Profil Guru wajib diisi.`);
+      if (!/^\d{16}$/.test(form.nik)) throw new Error('NIK harus terdiri dari 16 digit angka.');
+      if (!/^\d{16}$/.test(form.familyCardNumber)) throw new Error('Nomor KK harus terdiri dari 16 digit angka.');
+      if (nikStatus === 'duplicate' && !editingTeacherId) throw new Error('NIK sudah terdaftar pada Daftar Teacher.');
+      if (nikStatus === 'checking') throw new Error('Tunggu sampai pemeriksaan NIK selesai.');
+
       const payload = {
         displayName: form.displayName,
         employeeCode: form.employeeCode || undefined,
@@ -176,14 +290,14 @@ export default function MasterTeacherPage() {
         }
       };
 
-      const res = await fetch('/api/v1/teachers', {
-        method: 'POST',
+      const res = await fetch(editingTeacherId ? `/api/v1/teachers/${editingTeacherId}` : '/api/v1/teachers', {
+        method: editingTeacherId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const body = await res.json();
       if (!res.ok || !body.success) throw new Error(body.error?.message ?? 'Gagal menyimpan profil guru.');
-      const teacherId = body.data.id;
+      const teacherId = editingTeacherId ?? body.data.id;
 
       // Helper upload ke Cloudinary dengan folder kategori
       const uploadToCloudinary = async (file: File, type: string) => {
@@ -322,6 +436,7 @@ export default function MasterTeacherPage() {
       setOpen(false);
       setForm(empty);
       setUploadFiles({});
+      setEditingTeacherId(null);
       setStep(0);
       await load();
     } catch (err) {
@@ -533,24 +648,101 @@ export default function MasterTeacherPage() {
                     {t.employeeCode ?? 'Kode belum diisi'}
                   </span>
                 </div>
-                <span
-                  className={`status ${t.isActive ? 'status-active' : 'status-inactive'}`}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '999px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    background: t.isActive ? '#ecfdf5' : '#f1f5f9',
-                    color: t.isActive ? '#059669' : '#64748b'
-                  }}
-                >
-                  {t.isActive ? 'Aktif' : 'Nonaktif'}
-                </span>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+                  <button
+                    type="button"
+                    onClick={() => openTeacherDetail(t.id)}
+                    style={{ border: '1px solid #bae6fd', background: '#f0f9ff', color: '#0369a1', borderRadius: '8px', padding: '7px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    Lihat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => editTeacher(t.id)}
+                    style={{ border: '1px solid #a7f3d0', background: '#ecfdf5', color: '#047857', borderRadius: '8px', padding: '7px 10px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    Edit
+                  </button>
+                </div>
               </article>
             ))}
           </div>
         )}
       </section>
+
+      {detailOpen && selectedTeacher && (() => {
+        const profile = (selectedTeacher.profile ?? {}) as Record<string, unknown>;
+        const address = (selectedTeacher.address ?? {}) as Record<string, unknown>;
+        const employment = (selectedTeacher.employment ?? {}) as Record<string, unknown>;
+        const assignments = Array.isArray(selectedTeacher.assignments) ? selectedTeacher.assignments as Array<Record<string, unknown>> : [];
+        const educations = Array.isArray(selectedTeacher.educationHistories) ? selectedTeacher.educationHistories as Array<Record<string, unknown>> : [];
+        const documents = Array.isArray(selectedTeacher.documentRecords) ? selectedTeacher.documentRecords as Array<Record<string, unknown>> : [];
+        const value = (source: Record<string, unknown>, key: string, fallback = '-') => String(source[key] ?? fallback);
+        const Field = ({ label, text }: { label: string; text: string }) => (
+          <div style={{ minWidth: 0 }}>
+            <small style={{ display: 'block', color: '#94a3b8', fontSize: '10px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '4px' }}>{label}</small>
+            <span style={{ display: 'block', color: '#1e293b', fontSize: '13px', fontWeight: '650', overflowWrap: 'anywhere' }}>{text || '-'}</span>
+          </div>
+        );
+        const Section = ({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) => (
+          <section style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '18px', background: '#fff', boxShadow: '0 6px 18px rgba(15,23,42,0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <span style={{ width: '32px', height: '32px', display: 'grid', placeItems: 'center', borderRadius: '10px', background: '#ecfdf5', fontSize: '16px' }}>{icon}</span>
+              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '14px', fontWeight: '850' }}>{title}</h3>
+            </div>
+            {children}
+          </section>
+        );
+        return (
+          <div className="teacher-modal" role="presentation" style={{ overflowY: 'auto', padding: '20px', background: 'rgba(15,23,42,0.58)', backdropFilter: 'blur(8px)' }}>
+            <section className="teacher-dialog" role="dialog" aria-modal="true" aria-labelledby="teacher-detail-title" style={{ maxWidth: '860px', width: '100%', maxHeight: 'calc(100vh - 40px)', overflowY: 'auto', padding: 0, borderRadius: '24px', background: '#f8fafc', boxShadow: '0 24px 80px rgba(15,23,42,0.25)' }}>
+              <header style={{ position: 'sticky', top: 0, zIndex: 2, padding: '24px 28px', background: 'linear-gradient(135deg, #0f766e 0%, #0f4c5c 100%)', color: '#fff', borderRadius: '24px 24px 0 0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '18px', alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center', minWidth: 0 }}>
+                    <div style={{ width: '58px', height: '58px', flexShrink: 0, display: 'grid', placeItems: 'center', borderRadius: '18px', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.28)', fontSize: '20px', fontWeight: '850' }}>{String(selectedTeacher.displayName ?? 'G').slice(0, 2).toUpperCase()}</div>
+                    <div style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: '10px', fontWeight: '800', letterSpacing: '0.12em', opacity: 0.78 }}>TEACHER DETAIL</span>
+                      <h2 id="teacher-detail-title" style={{ margin: '5px 0 4px', fontSize: '23px', lineHeight: 1.15, overflowWrap: 'anywhere' }}>{String(selectedTeacher.displayName ?? 'Detail Guru')}</h2>
+                      <span style={{ fontSize: '12px', opacity: 0.82 }}>{String(selectedTeacher.employeeCode ?? 'Kode belum diisi')}</span>
+                    </div>
+                  </div>
+                  <button type="button" aria-label="Tutup detail teacher" onClick={() => setDetailOpen(false)} style={{ flexShrink: 0, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', fontWeight: '750' }}>✕</button>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '18px' }}>
+                  <span style={{ padding: '6px 10px', borderRadius: '999px', background: selectedTeacher.isActive ? '#d1fae5' : '#e2e8f0', color: selectedTeacher.isActive ? '#047857' : '#475569', fontSize: '11px', fontWeight: '800' }}>{selectedTeacher.isActive ? '● Aktif' : '● Nonaktif'}</span>
+                  <span style={{ padding: '6px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.14)', fontSize: '11px' }}>ID: {String(selectedTeacher.id).slice(0, 12)}…</span>
+                </div>
+              </header>
+              <div style={{ display: 'grid', gap: '14px', padding: '20px 28px 28px' }}>
+                <Section icon="👤" title="A. Profil Guru">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}>
+                    <Field label="Kode Guru" text={String(selectedTeacher.employeeCode ?? '-')} /><Field label="Nama Lengkap" text={String(selectedTeacher.displayName ?? '-')} /><Field label="Jenis Kelamin" text={value(profile, 'gender')} /><Field label="Tempat Lahir" text={value(profile, 'birthPlace')} /><Field label="Tanggal Lahir" text={value(profile, 'birthDate')} /><Field label="NIK" text={value(profile, 'nik')} /><Field label="Nomor KK" text={value(profile, 'familyCardNumber')} /><Field label="Email" text={value(profile, 'email')} /><Field label="Nomor HP" text={value(profile, 'phone')} /><Field label="WhatsApp" text={value(profile, 'whatsapp')} /><Field label="Status Pernikahan" text={value(profile, 'maritalStatus')} /><Field label="Jumlah Anak" text={value(profile, 'childrenCount', '0')} /><Field label="Status Guru" text={selectedTeacher.isActive ? 'Aktif' : 'Nonaktif'} />
+                  </div>
+                </Section>
+                <Section icon="📍" title="B. Alamat">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}><Field label="Alamat" text={value(address, 'address')} /><Field label="Desa / Kelurahan" text={value(address, 'village')} /><Field label="RT" text={value(address, 'rt')} /><Field label="RW" text={value(address, 'rw')} /><Field label="Kecamatan" text={value(address, 'district')} /><Field label="Kota" text={value(address, 'city')} /><Field label="Provinsi" text={value(address, 'province')} /><Field label="Kode Pos" text={value(address, 'postalCode')} /></div>
+                </Section>
+                <Section icon="💼" title="C. Kepegawaian">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px', marginBottom: assignments.length ? '16px' : 0 }}><Field label="Status Kepegawaian" text={value(employment, 'employmentStatus')} /><Field label="Tanggal Mulai Bekerja" text={value(employment, 'employmentStartedAt')} /></div>
+                  {assignments.length ? <div style={{ display: 'grid', gap: '10px' }}>{assignments.map((item, index) => <div key={String(item.id ?? index)} style={{ padding: '13px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}><strong style={{ display: 'block', color: '#0f766e', fontSize: '12px', marginBottom: '10px' }}>Unit/Jabatan #{index + 1}</strong><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}><Field label="Unit / Departemen" text={value(item, 'unit')} /><Field label="Jabatan" text={value(item, 'position')} /><Field label="Mulai Jabatan" text={value(item, 'startedAt').slice(0, 10)} /><Field label="Selesai Jabatan" text={value(item, 'endedAt').slice(0, 10)} /><Field label="Catatan" text={value(item, 'notes')} /></div></div>)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada unit atau jabatan.</span>}
+                </Section>
+                <Section icon="🎓" title="D. Riwayat Pendidikan">
+                  {educations.length ? <div style={{ display: 'grid', gap: '10px' }}>{educations.map((item, index) => <div key={String(item.id ?? index)} style={{ padding: '13px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}><strong style={{ display: 'block', color: '#0f766e', fontSize: '12px', marginBottom: '10px' }}>{value(item, 'level', 'Pendidikan')} · {value(item, 'institutionName')}</strong><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}><Field label="Nama Institusi" text={value(item, 'institutionName')} /><Field label="Program Studi" text={value(item, 'studyProgram')} /><Field label="Kota / Daerah" text={value(item, 'city')} /><Field label="Tahun Masuk" text={value(item, 'startedYear')} /><Field label="Tahun Lulus" text={value(item, 'graduatedYear')} /><Field label="Status Pendidikan" text={value(item, 'status')} /><Field label="Catatan" text={value(item, 'notes')} /></div></div>)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada riwayat pendidikan.</span>}
+                </Section>
+                <Section icon="💍" title="E. Data Pasangan">
+                  {Array.isArray(selectedTeacher.spouseLinks) && selectedTeacher.spouseLinks.length ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}>{(() => { const spouse = (selectedTeacher.spouseLinks as Array<Record<string, unknown>>)[0]; const partner = (spouse.partnerTeacher ?? {}) as Record<string, unknown>; return <><Field label="Hubungan" text={value(spouse, 'relationship')} /><Field label="Guru/Staff Mumtaza" text={spouse.isMumtazaStaff ? 'Ya' : 'Tidak'} /><Field label="Nama Pasangan" text={value(spouse, 'manualName', value(partner, 'displayName'))} /><Field label="Kode Pasangan" text={value(partner, 'employeeCode')} /></>; })()}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada data pasangan.</span>}
+                </Section>
+                <Section icon="👪" title="F. Data Keluarga">
+                  {Array.isArray(selectedTeacher.familyMembers) && selectedTeacher.familyMembers.length ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}>{(selectedTeacher.familyMembers as Array<Record<string, unknown>>).map((item, index) => <Field key={String(item.id ?? index)} label={value(item, 'relation')} text={value(item, 'fullName')} />)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada data keluarga.</span>}
+                </Section>
+                <Section icon="📄" title="G. Dokumen">
+                  {documents.length ? <div style={{ display: 'grid', gap: '8px' }}>{documents.map((doc, index) => <a key={String(doc.id ?? index)} href={String(doc.fileUrl ?? '#')} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', borderRadius: '11px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0369a1', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }}><span style={{ overflowWrap: 'anywhere' }}>📎 {String(doc.title ?? 'Dokumen')}</span><span>{String(doc.type ?? 'OTHER')} ↗</span></a>)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada dokumen.</span>}
+                </Section>
+              </div>
+            </section>
+          </div>
+        );
+      })()}
 
       {open && (
         <div className="teacher-modal" role="presentation" style={{ overflowY: 'auto', padding: '20px' }}>
@@ -593,7 +785,7 @@ export default function MasterTeacherPage() {
                     type="button"
                     key={label}
                     className={step === idx ? 'active' : ''}
-                    onClick={() => setStep(idx)}
+                    onClick={() => goToStep(idx)}
                     style={{
                       padding: '8px 14px',
                       fontSize: '12px',
@@ -612,6 +804,13 @@ export default function MasterTeacherPage() {
               </nav>
             </div>
 
+            {stepWarning && (
+              <div role="alert" style={{ position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, width: 'min(92vw, 520px)', display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px 16px', borderRadius: '14px', background: '#fff7ed', border: '1px solid #fdba74', color: '#9a3412', boxShadow: '0 16px 40px rgba(154,52,18,0.2)', animation: 'teacher-warning-in 180ms ease-out' }}>
+                <span style={{ fontSize: '20px', lineHeight: 1 }}>⚠️</span>
+                <div style={{ flex: 1 }}><strong style={{ display: 'block', fontSize: '13px', marginBottom: '3px' }}>Data belum lengkap</strong><span style={{ fontSize: '12px' }}>{stepWarning}</span></div>
+                <button type="button" aria-label="Tutup peringatan" onClick={() => setStepWarning('')} style={{ border: 'none', background: 'transparent', color: '#9a3412', fontSize: '18px', cursor: 'pointer', padding: 0 }}>✕</button>
+              </div>
+            )}
             <div
               className="teacher-form-grid"
               style={{
@@ -626,102 +825,37 @@ export default function MasterTeacherPage() {
                 <>
                   <label>
                     <span>Nama Lengkap *</span>
-                    <input
-                      required
-                      placeholder="Sesuai identitas resmi"
-                      value={form.displayName}
-                      onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-                    />
+                    <input required placeholder="Sesuai identitas resmi" value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} />
                   </label>
                   <label>
-                    <span>Jenis Kelamin</span>
-                    <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
-                      <option value="MALE">Laki-laki</option>
-                      <option value="FEMALE">Perempuan</option>
+                    <span>Jenis Kelamin *</span>
+                    <select required value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}>
+                      <option value="">Pilih jenis kelamin</option><option value="MALE">Laki-laki</option><option value="FEMALE">Perempuan</option>
                     </select>
                   </label>
+                  <label><span>Tempat Lahir *</span><input required placeholder="Kota/Tempat kelahiran" value={form.birthPlace} onChange={(e) => setForm({ ...form, birthPlace: e.target.value })} /></label>
+                  <label><span>Tanggal Lahir *</span><input required type="date" value={form.birthDate} onChange={(e) => setForm({ ...form, birthDate: e.target.value })} /></label>
                   <label>
-                    <span>Tempat Lahir</span>
-                    <input
-                      placeholder="Kota/Tempat kelahiran"
-                      value={form.birthPlace}
-                      onChange={(e) => setForm({ ...form, birthPlace: e.target.value })}
-                    />
+                    <span>NIK *</span>
+                    <input required minLength={16} maxLength={16} pattern="[0-9]{16}" inputMode="numeric" placeholder="16 digit NIK" value={form.nik} onChange={(e) => { const nik = e.target.value.replace(/\D/g, '').slice(0, 16); setForm({ ...form, nik }); setNikStatus(nik.length === 16 ? 'checking' : 'idle'); }} />
+                    {nikStatus === 'checking' && <small style={{ color: '#64748b' }}>Memeriksa NIK...</small>}
+                    {nikStatus === 'duplicate' && <small style={{ color: '#dc2626', fontWeight: 700 }}>NIK sudah terdaftar pada Daftar Teacher.</small>}
+                    {nikStatus === 'available' && <small style={{ color: '#059669', fontWeight: 700 }}>NIK tersedia.</small>}
                   </label>
+                  <label><span>Nomor KK *</span><input required minLength={16} maxLength={16} pattern="[0-9]{16}" inputMode="numeric" placeholder="Nomor Kartu Keluarga" value={form.familyCardNumber} onChange={(e) => setForm({ ...form, familyCardNumber: e.target.value.replace(/\D/g, '').slice(0, 16) })} /></label>
+                  <label><span>Email Aktif *</span><input required type="email" placeholder="contoh@mumtaza.sch.id" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
+                  <label><span>Nomor HP *</span><input required pattern="[0-9+ -]{8,}" inputMode="tel" placeholder="08xxxxxxxxxx" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
+                  <label><span>Nomor WhatsApp *</span><input required pattern="[0-9+ -]{8,}" inputMode="tel" placeholder="Jika berbeda dari Nomor HP" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} /></label>
                   <label>
-                    <span>Tanggal Lahir</span>
-                    <input
-                      type="date"
-                      value={form.birthDate}
-                      onChange={(e) => setForm({ ...form, birthDate: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>NIK</span>
-                    <input
-                      placeholder="16 digit NIK"
-                      value={form.nik}
-                      onChange={(e) => setForm({ ...form, nik: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>Nomor KK</span>
-                    <input
-                      placeholder="Nomor Kartu Keluarga"
-                      value={form.familyCardNumber}
-                      onChange={(e) => setForm({ ...form, familyCardNumber: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>Email Aktif</span>
-                    <input
-                      type="email"
-                      placeholder="contoh@mumtaza.sch.id"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>Nomor HP</span>
-                    <input
-                      placeholder="08xxxxxxxxxx"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>Nomor WhatsApp</span>
-                    <input
-                      placeholder="Jika berbeda dari Nomor HP"
-                      value={form.whatsapp}
-                      onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>Status Pernikahan</span>
-                    <select
-                      value={form.maritalStatus}
-                      onChange={(e) => setForm({ ...form, maritalStatus: e.target.value })}
-                    >
-                      <option value="SINGLE">Belum Menikah</option>
-                      <option value="MARRIED">Menikah</option>
-                      <option value="DIVORCED">Cerai</option>
+                    <span>Status Pernikahan *</span>
+                    <select required value={form.maritalStatus} onChange={(e) => setForm({ ...form, maritalStatus: e.target.value })}>
+                      <option value="">Pilih status pernikahan</option><option value="SINGLE">Belum Menikah</option><option value="MARRIED">Menikah</option><option value="DIVORCED">Cerai</option>
                     </select>
                   </label>
-                  {form.maritalStatus === 'MARRIED' && (
-                    <label>
-                      <span>Jumlah Anak</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={form.childrenCount}
-                        onChange={(e) => setForm({ ...form, childrenCount: e.target.value })}
-                      />
-                    </label>
-                  )}
+                  {form.maritalStatus === 'MARRIED' && <label><span>Jumlah Anak *</span><input required type="number" min="0" value={form.childrenCount} onChange={(e) => setForm({ ...form, childrenCount: e.target.value })} /></label>}
                   <label>
-                    <span>Status Guru</span>
-                    <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+                    <span>Status Guru *</span>
+                    <select required value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
                       <option value="ACTIVE">Aktif</option>
                       <option value="INACTIVE">Nonaktif</option>
                       <option value="ON_LEAVE">Cuti</option>
@@ -1327,7 +1461,7 @@ export default function MasterTeacherPage() {
                 <button
                   type="button"
                   className="primary-button"
-                  onClick={() => setStep(step + 1)}
+                  onClick={() => goToStep(step + 1)}
                 >
                   Berikutnya
                 </button>
