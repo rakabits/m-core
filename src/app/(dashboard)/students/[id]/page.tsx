@@ -1,24 +1,20 @@
 'use client';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 type Parent = { id?: string; role?: string; fullName: string; nik?: string | null; phone?: string | null; education?: string | null; educationOther?: string | null; occupation?: string | null; occupationOther?: string | null; monthlyIncome?: number | null; relationship?: string | null };
 type Guardian = { guardianIsDifferent: boolean; guardianSource: 'father' | 'mother' | 'other'; otherParent?: Parent | null };
 type Student = {
   student_id: string; student_number?: string; mts_student_id?: string | null; ma_student_id?: string | null; photo_url?: string | null; full_name: string; gender: string; birth_place?: string | null; birth_date?: string | null; status: string; email?: string | null; nik?: string | null; nisn?: string | null; family_card_number?: string | null; passport_number?: string | null; phone?: string | null; whatsapp?: string | null; telegram_username?: string | null; address?: { line?: string | null; rt?: string | null; rw?: string | null; village?: string | null; district?: string | null; city_regency?: string | null; province?: string | null; postal_code?: string | null }; physical?: { height_cm?: number | string | null; weight_kg?: number | string | null; sibling_count?: number | null; birth_order?: number | null }; education_histories?: Array<{ id: string; level: string; institutionName: string; cityRegency?: string | null; province?: string | null; graduationYear?: number | null; degreeLevel?: string | null }>; parents?: Parent[]; guardian?: Guardian | null;
-  active_program?: { program_name: string; class_name?: string | null; academic_year?: string | null } | null;
+  active_program?: { program_id?: string; program_name: string; class_name?: string | null; academic_year?: string | null } | null;
 };
 
-type History = {
-  history_id: string;
-  program_name: string;
-  program_code?: string;
-  academic_year: string;
-  class_name?: string | null;
-  status: string;
-  start_date?: string | null;
-  end_date?: string | null;
-};
+async function loadAcademicClasses(programId: string, academicYear: string) {
+  const response = await fetch(`/api/v1/academic-classes?programId=${encodeURIComponent(programId)}&academicYear=${encodeURIComponent(academicYear)}`);
+  const payload = await parseResponse<{ data?: Array<{ id: string; code: string; name: string; grade?: number }> }>(response);
+  if (!response.ok) throw new Error('Gagal memuat kelas dari Academic Center');
+  return payload.data || [];
+}
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const text = await response.text();
@@ -32,15 +28,17 @@ async function parseResponse<T>(response: Response): Promise<T> {
 
 export default function StudentDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const router = useRouter();
   const [student, setStudent] = useState<Student | null>(null);
-  const [history, setHistory] = useState<History[]>([]);
   const [edit, setEdit] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<File | null>(null);
   const [pendingUrl, setPendingUrl] = useState<string | null>(null);
   const [form, setForm] = useState<Partial<Student>>({});
   const [parents, setParents] = useState<{ father: Parent; mother: Parent; other: Parent }>({ father: { fullName: '' }, mother: { fullName: '' }, other: { fullName: '' } });
   const [guardian, setGuardian] = useState<Guardian>({ guardianIsDifferent: false, guardianSource: 'father' });
+  const [showClassModal, setShowClassModal] = useState(false);
+  const [selectedClass, setSelectedClass] = useState('');
+  const [academicClasses, setAcademicClasses] = useState<Array<{ id: string; code: string; name: string; grade?: number }>>([]);
+  const [classesLoading, setClassesLoading] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -76,34 +74,21 @@ export default function StudentDetailPage() {
   }
 
   useEffect(() => {
-    Promise.all([
-      fetch(`/api/v1/students/${id}`),
-      fetch(`/api/v1/students/${id}/program-history`),
-    ])
-      .then(async ([studentResponse, historyResponse]) => {
+    fetch(`/api/v1/students/${id}`)
+      .then(async (studentResponse) => {
         const studentJson = await parseResponse<{
           data: Student;
           error?: { code?: string };
         }>(studentResponse);
         if (!studentResponse.ok)
-          throw new Error(
-            studentJson.error?.code || 'Gagal memuat siswa'
-          );
+          throw new Error(studentJson.error?.code || 'Gagal memuat siswa');
         setStudent(studentJson.data);
         setForm({ ...studentJson.data, birth_date: studentJson.data.birth_date ? new Date(studentJson.data.birth_date).toISOString().slice(0, 10) : '' });
         const parentRows = studentJson.data.parents || [];
         setParents({ father: parentRows.find((row) => row.role === 'father') || { fullName: '' }, mother: parentRows.find((row) => row.role === 'mother') || { fullName: '' }, other: parentRows.find((row) => row.role === 'other') || { fullName: '' } });
         setGuardian(studentJson.data.guardian || { guardianIsDifferent: false, guardianSource: 'father' });
-        if (historyResponse.ok) {
-          const historyJson = await parseResponse<{ data: History[] }>(
-            historyResponse
-          );
-          setHistory(historyJson.data || []);
-        }
       })
-      .catch((e) =>
-        setError(e instanceof Error ? e.message : 'Gagal memuat siswa')
-      )
+      .catch((e) => setError(e instanceof Error ? e.message : 'Gagal memuat siswa'))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -139,11 +124,11 @@ export default function StudentDetailPage() {
       setStudent((current) =>
         current
           ? {
-              ...current,
-              student_id: current.student_id,
-              full_name: j.data?.full_name ?? current.full_name,
-              status: j.data?.status ?? current.status,
-            }
+            ...current,
+            student_id: current.student_id,
+            full_name: j.data?.full_name ?? current.full_name,
+            status: j.data?.status ?? current.status,
+          }
           : current
       );
       if (pendingPhoto) {
@@ -178,7 +163,7 @@ export default function StudentDetailPage() {
 
   return (
     <main className="students-page student-profile-page">
-      <button className="detail-button" onClick={() => router.back()}>
+      <button className="detail-button" onClick={() => window.history.back()}>
         ← Kembali
       </button>
       <header className="students-header">
@@ -196,9 +181,12 @@ export default function StudentDetailPage() {
           )}
           <p className="eyebrow">STUDENT PROFILE</p>
           <h1>{student.full_name}</h1>
-          <p className="subtitle student-id-highlight">
-            Student ID: {student.student_number || student.student_id}
-          </p>
+          <div className="student-id-status-row">
+            <p className="subtitle student-id-highlight">
+              Student ID: {student.student_number || student.student_id}
+            </p>
+            <span className={`status status-${student.status} profile-header-status`}>{student.status}</span>
+          </div>
         </div>
         <div className="form-actions">
           {!edit && (
@@ -362,7 +350,7 @@ export default function StudentDetailPage() {
               <div>
                 <span className="section-kicker">KONTAK</span>
                 {([['Email', student.email], ['Nomor telepon', student.phone], ['WhatsApp', student.whatsapp], ['Username Telegram', student.telegram_username]] as const).map(([label, value]) => <p key={label}><span>{label}</span><b>:</b><strong>{value || 'Belum diisi'}</strong></p>)}
-                <span className={`status status-${student.status} profile-status`}>{student.status}</span>
+                <span className={`status status-${student.status} profile-status contact-status-legacy`}>{student.status}</span>
               </div>
             </div>
             <hr />
@@ -372,62 +360,14 @@ export default function StudentDetailPage() {
             </div>
             <hr />
             <div className="profile-grid">
-              <div><span className="section-kicker">DATA ORANG TUA / WALI</span>{(student.parents || []).map((parent) => <div key={parent.id || parent.role} className="parent-summary"><h3>{parent.role === 'father' ? 'Ayah' : parent.role === 'mother' ? 'Ibu' : 'Wali'} — {parent.fullName}</h3><p><span>NIK</span><b>:</b><strong>{parent.nik || 'Belum diisi'}</strong></p><p><span>Telepon</span><b>:</b><strong>{parent.phone || 'Belum diisi'}</strong></p><p><span>Pendidikan</span><b>:</b><strong>{parent.educationOther || parent.education || 'Belum diisi'}</strong></p><p><span>Pekerjaan</span><b>:</b><strong>{parent.occupationOther || parent.occupation || 'Belum diisi'}</strong></p><p><span>Penghasilan</span><b>:</b><strong>{parent.monthlyIncome != null ? `Rp ${parent.monthlyIncome.toLocaleString('id-ID')}` : 'Belum diisi'}</strong></p></div>)}</div>
-              <div><span className="section-kicker">RIWAYAT PENDIDIKAN</span>{student.education_histories?.length ? student.education_histories.map((education) => <div className="parent-summary" key={education.id}><h3>{education.level}</h3><p><span>Institusi</span><b>:</b><strong>{education.institutionName}</strong></p><p><span>Kota / Provinsi</span><b>:</b><strong>{[education.cityRegency, education.province].filter(Boolean).join(' / ') || 'Belum diisi'}</strong></p><p><span>Tahun</span><b>:</b><strong>{education.graduationYear || 'Belum diisi'}{education.degreeLevel ? ` (${education.degreeLevel})` : ''}</strong></p></div>) : <p className="muted">Belum ada riwayat pendidikan.</p>}</div>
+              <div><span className="section-kicker">DATA ORANG TUA / WALI</span>{(student.parents || []).map((parent) => <div key={parent.id || parent.role} className="parent-summary"><h3>{parent.role === 'father' ? 'Ayah' : parent.role === 'mother' ? 'Ibu' : 'Wali'} — {parent.fullName}</h3>{parent.role === 'other' && <p><span>Hubungan dengan siswa</span><b>:</b><strong>{parent.relationship || 'Belum diisi'}</strong></p>}<p><span>NIK</span><b>:</b><strong>{parent.nik || 'Belum diisi'}</strong></p><p><span>Telepon</span><b>:</b><strong>{parent.phone || 'Belum diisi'}</strong></p><p><span>Pendidikan</span><b>:</b><strong>{parent.educationOther || parent.education || 'Belum diisi'}</strong></p><p><span>Pekerjaan</span><b>:</b><strong>{parent.occupationOther || parent.occupation || 'Belum diisi'}</strong></p><p><span>Penghasilan</span><b>:</b><strong>{parent.monthlyIncome != null ? `Rp ${parent.monthlyIncome.toLocaleString('id-ID')}` : 'Belum diisi'}</strong></p></div>)}</div>
+              <div><span className="section-kicker">RIWAYAT PENDIDIKAN</span>{student.education_histories?.length ? student.education_histories.map((education) => { const educationLevelLabels: Record<string, string> = { elementary: 'SD', junior_high: 'SMP', senior_high: 'SMA', university: 'Universitas', university_s1: 'S1', university_s2: 'S2', university_s3: 'S3' }; const normalizedLevel = education.level.toLowerCase(); const degreeLabel = education.degreeLevel?.trim().toUpperCase(); const educationLevel = normalizedLevel === 'university' && ['S1', 'S2', 'S3'].includes(degreeLabel || '') ? degreeLabel : educationLevelLabels[normalizedLevel] || education.level; const isMajorLevel = ['senior_high', 'university', 'university_s1', 'university_s2', 'university_s3', 'sma', 's1', 's2', 's3'].includes(normalizedLevel); return <div className="parent-summary" key={education.id}><h3>{educationLevel}</h3><p><span>Institusi</span><b>:</b><strong>{education.institutionName}</strong></p><p><span>Kota / Provinsi</span><b>:</b><strong>{[education.cityRegency, education.province].filter(Boolean).join(' / ') || 'Belum diisi'}</strong></p>{isMajorLevel && <p><span>Jurusan</span><b>:</b><strong>{education.degreeLevel || 'Belum diisi'}</strong></p>}<p><span>Tahun</span><b>:</b><strong>{education.graduationYear || 'Belum diisi'}</strong></p></div>; }) : <p className="muted">Belum ada riwayat pendidikan.</p>}</div>
             </div>
             <hr />
             <div className="profile-grid">
-              <div><span className="section-kicker">PROGRAM AKTIF</span><p className={`active-program-name${student.active_program?.program_name ? '' : ' is-empty'}`}><strong>{student.active_program?.program_name || 'Belum ada program aktif'}</strong></p><div className="program-summary"><p><span>Kelas</span><b>:</b><strong>{student.active_program?.class_name || 'Belum tersedia'}</strong></p><p><span>Tahun ajaran</span><b>:</b><strong>{student.active_program?.academic_year || 'Belum tersedia'}</strong></p></div></div>
+              <div><div className="active-program-heading"><span className="section-kicker">PROGRAM AKTIF</span><button type="button" className="detail-button add-class-button" onClick={async () => { setShowClassModal(true); if (student.active_program?.program_id && student.active_program.academic_year) { setClassesLoading(true); try { setAcademicClasses(await loadAcademicClasses(student.active_program.program_id, student.active_program.academic_year)); } catch (e) { setError(e instanceof Error ? e.message : 'Gagal memuat kelas'); } finally { setClassesLoading(false); } } }}>+ Tambah ke kelas</button></div><p className={`active-program-name${student.active_program?.program_name ? '' : ' is-empty'}`}><strong>{student.active_program?.program_name || 'Belum ada program aktif'}</strong></p><div className="program-summary"><p><span>Kelas</span><b>:</b><strong>{student.active_program?.class_name || 'Belum tersedia'}</strong></p><p><span>Tahun ajaran</span><b>:</b><strong>{student.active_program?.academic_year || 'Belum tersedia'}</strong></p></div></div>
             </div>
-          </section>
-          <section className="student-card">
-            <div className="profile-grid">
-              <div>
-                <span className="section-kicker">PROGRAM HISTORY</span>
-                <h2>Perjalanan pendidikan</h2>
-              </div>
-              <div className="form-actions">
-                <button
-                  className="detail-button"
-                  onClick={() =>
-                    router.push(`/program-history?student_id=${id}`)
-                  }
-                >
-                  Lihat semua
-                </button>
-                <button
-                  className="primary-button"
-                  onClick={() =>
-                    router.push(`/program-history?student_id=${id}`)
-                  }
-                >
-                  Kelola program
-                </button>
-              </div>
-            </div>
-            {history.length === 0 ? (
-              <p className="muted">Belum ada riwayat program.</p>
-            ) : (
-              <div className="timeline">
-                {history.map((row) => (
-                  <article className="timeline-item" key={row.history_id}>
-                    <div className="timeline-dot" />
-                    <div>
-                      <p className="eyebrow">{row.academic_year}</p>
-                      <h3>
-                        {row.program_name}
-                        {row.class_name ? ` — ${row.class_name}` : ''}
-                      </h3>
-                      <span className={`status-badge status-${row.status}`}>
-                        {row.status}
-                      </span>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
-        </>
+          </section>{showClassModal && <div className="class-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowClassModal(false); }}><section className="class-modal" role="dialog" aria-modal="true" aria-labelledby="class-modal-title"><div className="class-modal-header"><div><span className="section-kicker">PROGRAM CATALOG</span><h2 id="class-modal-title">Pilih kelas aktif</h2><p>Tahun ajaran dan program mengikuti data pada profil siswa.</p></div><button type="button" className="class-modal-close" aria-label="Tutup" onClick={() => setShowClassModal(false)}>×</button></div><div className="class-modal-form"><label>Kelas<select value={selectedClass} onChange={(event) => setSelectedClass(event.target.value)}><option value="">Pilih kelas dari Program Catalog</option>{classesLoading ? <option value="">Memuat kelas...</option> : academicClasses.map((item) => <option key={item.id} value={item.name}>{item.name}</option>)}</select></label></div><div className="class-modal-actions"><button type="button" className="detail-button" onClick={() => setShowClassModal(false)}>Batal</button><button type="button" className="primary-button" disabled={!selectedClass} onClick={() => setShowClassModal(false)}>Simpan kelas</button></div></section></div>}</>
       )}
     </main>
   );

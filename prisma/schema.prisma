@@ -281,6 +281,9 @@ model Program {
   /// Tahun akademik/program saat record ini aktif.
   academicYear String @default("2025/2026") @map("academic_year") @db.VarChar(9)
 
+  /// Periode tampilan/operasional program. Pra-Univ dapat menggunakan tahun tunggal, misalnya 2026.
+  academicPeriod String @default("2025/2026") @map("academic_period") @db.VarChar(9)
+
   /// Jenjang pendidikan lama untuk kompatibilitas.
   educationLevel String?        @map("education_level") @db.VarChar(100)
   /// Jenjang resmi untuk grouping Academic Master.
@@ -299,12 +302,14 @@ model Program {
   enrollmentPeriods     EnrollmentPeriod[]
   applicants            Applicant[]
   scopeAssignments      ScopeAssignment[]
+  classDefinitions      ClassDefinition[]
 
   @@unique([programCode, academicYear], name: "uq_program_code_academic_year")
   @@index([programName])
   @@index([isActive])
   @@index([academicLevel])
   @@index([academicYear])
+  @@index([academicPeriod])
   @@map("programs")
 }
 
@@ -622,16 +627,107 @@ model AcademicYear {
   seniorHighClasses     SeniorHighClass[]
   preUniversityPrograms PreUniversityProgram[]
   histories             AcademicMasterHistory[]
+  levelSettings         AcademicLevelSetting[]
 
   @@index([isActive])
   @@map("academic_years")
 }
 
 /// Kelompok kelas Junior High/SMP. Dipisahkan dari jenjang lain agar atribut kelas tidak saling nullable dan tidak terjadi anomali update.
+
+model AcademicLevelSetting {
+  id             String        @id @default(uuid()) @map("academic_level_setting_id")
+  academicLevel  AcademicLevel @unique @map("academic_level")
+  academicYearId String        @map("academic_year_id")
+  academicYear   AcademicYear  @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@map("academic_level_settings")
+}
+
+// =============================================================================
+// PROGRAM CATALOG — ClassDefinition & ClassSlot
+//
+// ClassDefinition = template baku nama grade per program (terkunci oleh admin).
+// ClassSlot       = rombel aktual per ClassDefinition (A, B, C, dst — opsional).
+//
+// Aliran data:
+//   Program → ClassDefinition (grade 7/8/9 atau 10/11/12)
+//                  └── ClassSlot (rombel A, B, C, dst.)
+//                           └── JuniorHighClass / SeniorHighClass (instance aktif per tahun)
+//
+// Sumber kebenaran tunggal untuk: dashboard, absensi, jadwal, rekap, laporan.
+// =============================================================================
+
+/// Template baku nama grade per program. Nama grade TIDAK boleh diubah pengguna biasa.
+model ClassDefinition {
+  id            String        @id @default(uuid()) @map("class_def_id")
+  programId     String        @map("program_id")
+
+  /// Nomor grade: 7, 8, 9 untuk MTs; 10, 11, 12 untuk MA.
+  grade         Int
+
+  /// Label nama grade yang baku. Contoh: "Kelas 7", "Kelas 10".
+  /// Hanya dapat diubah oleh SUPER_ADMIN melalui form khusus dengan konfirmasi.
+  gradeLabel    String        @db.VarChar(30)   @map("grade_label")
+
+  /// Jumlah rombel default saat program dibuat. Default 1.
+  defaultSlots  Int           @default(1)        @map("default_slots")
+
+  /// Status aktif definisi kelas ini.
+  isActive      Boolean       @default(true)     @map("is_active")
+
+  createdAt     DateTime      @default(now())    @map("created_at") @db.Timestamptz()
+  updatedAt     DateTime      @updatedAt         @map("updated_at") @db.Timestamptz()
+
+  program       Program       @relation(fields: [programId], references: [id], onDelete: Restrict)
+  slots         ClassSlot[]
+
+  /// Satu program hanya boleh punya satu ClassDefinition per grade.
+  @@unique([programId, grade], name: "uq_class_def_program_grade")
+  @@index([programId])
+  @@index([isActive])
+  @@map("class_definitions")
+}
+
+/// Rombel aktual per ClassDefinition. Satu grade bisa punya lebih dari 1 rombel (A, B, C, dst).
+/// displayName dikalkulasi: gradeLabel + " " + suffix (atau hanya gradeLabel jika suffix kosong).
+model ClassSlot {
+  id              String          @id @default(uuid()) @map("class_slot_id")
+  classDefId      String          @map("class_def_id")
+
+  /// Suffix rombel: "A", "B", "C", atau "" (kosong = hanya satu rombel tanpa suffix).
+  suffix          String          @db.VarChar(10)
+
+  /// Nama tampilan final. Contoh: "Kelas 7", "Kelas 7A", "Kelas 7B".
+  displayName     String          @db.VarChar(60)    @map("display_name")
+
+  /// Kapasitas maksimal siswa per rombel. Opsional.
+  capacity        Int?
+
+  /// Status aktif rombel ini.
+  isActive        Boolean         @default(true)     @map("is_active")
+
+  createdAt       DateTime        @default(now())    @map("created_at") @db.Timestamptz()
+  updatedAt       DateTime        @updatedAt         @map("updated_at") @db.Timestamptz()
+
+  classDef        ClassDefinition @relation(fields: [classDefId], references: [id], onDelete: Restrict)
+  juniorHighClasses JuniorHighClass[]
+  seniorHighClasses SeniorHighClass[]
+
+  /// Satu ClassDefinition tidak boleh punya dua slot dengan suffix yang sama.
+  @@unique([classDefId, suffix], name: "uq_class_slot_def_suffix")
+  @@index([classDefId])
+  @@index([isActive])
+  @@map("class_slots")
+}
+
 model JuniorHighClass {
   id             String       @id @default(uuid()) @map("junior_high_class_id")
   programId      String       @map("program_id")
   academicYearId String       @map("academic_year_id")
+  /// FK opsional ke ClassSlot. Null pada data lama (kompatibilitas mundur).
+  classSlotId    String?      @map("class_slot_id")
   code           String       @db.VarChar(50)
   name           String       @db.VarChar(100)
   grade          Int
@@ -641,10 +737,12 @@ model JuniorHighClass {
   updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
   program        Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  classSlot      ClassSlot?   @relation(fields: [classSlotId], references: [id], onDelete: SetNull)
 
   @@unique([academicYearId, programId, code], name: "uq_junior_high_class_context")
   @@index([programId])
   @@index([academicYearId])
+  @@index([classSlotId])
   @@map("junior_high_classes")
 }
 
@@ -653,6 +751,8 @@ model SeniorHighClass {
   id             String       @id @default(uuid()) @map("senior_high_class_id")
   programId      String       @map("program_id")
   academicYearId String       @map("academic_year_id")
+  /// FK opsional ke ClassSlot. Null pada data lama (kompatibilitas mundur).
+  classSlotId    String?      @map("class_slot_id")
   code           String       @db.VarChar(50)
   name           String       @db.VarChar(100)
   grade          Int
@@ -663,10 +763,12 @@ model SeniorHighClass {
   updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
   program        Program      @relation(fields: [programId], references: [id], onDelete: Restrict)
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  classSlot      ClassSlot?   @relation(fields: [classSlotId], references: [id], onDelete: SetNull)
 
   @@unique([academicYearId, programId, code], name: "uq_senior_high_class_context")
   @@index([programId])
   @@index([academicYearId])
+  @@index([classSlotId])
   @@map("senior_high_classes")
 }
 
@@ -677,8 +779,6 @@ model PreUniversityProgram {
   academicYearId String       @map("academic_year_id")
   code           String       @db.VarChar(50)
   name           String       @db.VarChar(150)
-  destination    String?      @db.VarChar(100)
-  capacity       Int?
   isActive       Boolean      @default(true) @map("is_active")
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
@@ -699,10 +799,15 @@ model AcademicClass {
   name               String              @db.VarChar(100)
   capacity           Int?
   isActive           Boolean             @default(true) @map("is_active")
+
+  /// FK wali kelas. Berbeda dari teacher (guru pengajar) karena wali kelas hanya satu per kelas.
+  homeRoomTeacherId  String?             @map("home_room_teacher_id")
+
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz()
   program            Program             @relation(fields: [programId], references: [id], onDelete: Restrict)
   academicYear       AcademicYear        @relation(fields: [academicYearId], references: [id], onDelete: Restrict)
+  homeRoomTeacher    Teacher?            @relation("ClassHomeRoom", fields: [homeRoomTeacherId], references: [id], onDelete: SetNull)
   teachers           Teacher[]
   enrollments        ClassEnrollment[]
   schedules          Schedule[]
@@ -712,6 +817,7 @@ model AcademicClass {
   @@unique([academicYearId, programId, code], name: "uq_academic_class_context")
   @@index([programId])
   @@index([academicYearId])
+  @@index([homeRoomTeacherId])
   @@map("academic_classes")
 }
 
@@ -774,6 +880,7 @@ model Teacher {
   updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
   userProfile   UserProfile?    @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
   classes       AcademicClass[]
+  homeRoomClasses AcademicClass[] @relation("ClassHomeRoom")
   schedules     Schedule[]
 
   @@index([displayName])

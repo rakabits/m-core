@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Program = { programName: string; programCode: string };
 type FormTemplate = { selectedFields?: string[] };
@@ -42,6 +42,8 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
   const [done, setDone] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [submittedInfo, setSubmittedInfo] = useState<{ registrationNo?: string; fullName?: string | null; program?: { programName: string; programCode: string }; submittedAt?: string } | null>(null);
+  const [nikStatus, setNikStatus] = useState<{ checking: boolean; ok: boolean | null; message: string }>({ checking: false, ok: null, message: '' });
+  const nikDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     params.then(({ token: tok }) => {
@@ -91,6 +93,26 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
 
   const set = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
 
+  const checkNik = useCallback((nik: string, tok: string) => {
+    if (nikDebounceRef.current) clearTimeout(nikDebounceRef.current);
+    const trimmed = nik.trim();
+    if (!trimmed) { setNikStatus({ checking: false, ok: null, message: '' }); return; }
+    setNikStatus({ checking: true, ok: null, message: 'Memeriksa NIK...' });
+    nikDebounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/v1/public-registration/${tok}/check-nik?nik=${encodeURIComponent(trimmed)}`, { cache: 'no-store' });
+        const result = await res.json() as { available: boolean; message?: string };
+        if (result.available) {
+          setNikStatus({ checking: false, ok: true, message: 'NIK tersedia.' });
+        } else {
+          setNikStatus({ checking: false, ok: false, message: result.message || 'NIK sudah digunakan.' });
+        }
+      } catch {
+        setNikStatus({ checking: false, ok: null, message: '' });
+      }
+    }, 600);
+  }, []);
+
   async function uploadFile(file: File, fieldKey: string) {
     if (!file.type.startsWith('image/')) return setError('File harus berupa gambar');
     setUploading(true);
@@ -131,6 +153,15 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
     const email = String(form.email).trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Format email tidak valid.');
+      return false;
+    }
+
+    if (nikStatus.checking) {
+      setError('Sedang memeriksa NIK, harap tunggu sebentar.');
+      return false;
+    }
+    if (nikStatus.ok === false) {
+      setError(nikStatus.message || 'NIK tidak valid.');
       return false;
     }
 
@@ -240,7 +271,18 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
                       </select>
                     </label>
                     <label>NIK
-                      <input required value={form.nationalId || ''} onChange={(e) => set('nationalId', e.target.value)} />
+                      <input
+                        required
+                        value={form.nationalId || ''}
+                        onChange={(e) => { set('nationalId', e.target.value); checkNik(e.target.value, token); }}
+                        aria-describedby="nik-status"
+                        aria-invalid={nikStatus.ok === false}
+                      />
+                      {nikStatus.message && (
+                        <small id="nik-status" style={{ color: nikStatus.ok === true ? 'var(--color-success, #16a34a)' : nikStatus.ok === false ? 'var(--color-error, #dc2626)' : 'var(--color-muted, #6b7280)' }}>
+                          {nikStatus.message}
+                        </small>
+                      )}
                     </label>
                   </div>
 
@@ -338,9 +380,11 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
                             <label>Tahun lulus
                               <input type="number" value={form[`${level}.graduationYear`] || ''} onChange={(e) => set(`${level}.graduationYear`, e.target.value)} />
                             </label>
-                            <label>Jurusan/Gelar
-                              <input value={form[`${level}.degreeLevel`] || ''} onChange={(e) => set(`${level}.degreeLevel`, e.target.value)} />
-                            </label>
+                            {!['educationSd', 'educationSmp'].includes(level) && (
+                              <label>Jurusan
+                                <input value={form[`${level}.degreeLevel`] || ''} onChange={(e) => set(`${level}.degreeLevel`, e.target.value)} />
+                              </label>
+                            )}
                           </div>
                         </fieldset>
                       ))}

@@ -1,0 +1,16 @@
+ALTER TABLE "junior_high_classes" ADD COLUMN "class_slot_id" TEXT;
+ALTER TABLE "senior_high_classes" ADD COLUMN "class_slot_id" TEXT;
+CREATE TABLE "class_definitions" ("class_def_id" TEXT NOT NULL,"program_id" TEXT NOT NULL,"grade" INTEGER NOT NULL,"grade_label" VARCHAR(30) NOT NULL,"default_slots" INTEGER NOT NULL DEFAULT 1,"is_active" BOOLEAN NOT NULL DEFAULT true,"created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,"updated_at" TIMESTAMPTZ NOT NULL,CONSTRAINT "class_definitions_pkey" PRIMARY KEY ("class_def_id"));
+CREATE TABLE "class_slots" ("class_slot_id" TEXT NOT NULL,"class_def_id" TEXT NOT NULL,"suffix" VARCHAR(10) NOT NULL,"display_name" VARCHAR(60) NOT NULL,"capacity" INTEGER,"is_active" BOOLEAN NOT NULL DEFAULT true,"created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,"updated_at" TIMESTAMPTZ NOT NULL,CONSTRAINT "class_slots_pkey" PRIMARY KEY ("class_slot_id"));
+CREATE UNIQUE INDEX "class_definitions_program_id_grade_key" ON "class_definitions"("program_id","grade");
+CREATE INDEX "class_definitions_program_id_idx" ON "class_definitions"("program_id");
+CREATE INDEX "class_definitions_is_active_idx" ON "class_definitions"("is_active");
+CREATE UNIQUE INDEX "class_slots_class_def_id_suffix_key" ON "class_slots"("class_def_id","suffix");
+CREATE INDEX "class_slots_class_def_id_idx" ON "class_slots"("class_def_id");
+CREATE INDEX "class_slots_is_active_idx" ON "class_slots"("is_active");
+CREATE INDEX "junior_high_classes_class_slot_id_idx" ON "junior_high_classes"("class_slot_id");
+CREATE INDEX "senior_high_classes_class_slot_id_idx" ON "senior_high_classes"("class_slot_id");
+ALTER TABLE "class_definitions" ADD CONSTRAINT "class_definitions_program_id_fkey" FOREIGN KEY ("program_id") REFERENCES "programs"("program_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "class_slots" ADD CONSTRAINT "class_slots_class_def_id_fkey" FOREIGN KEY ("class_def_id") REFERENCES "class_definitions"("class_def_id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "junior_high_classes" ADD CONSTRAINT "junior_high_classes_class_slot_id_fkey" FOREIGN KEY ("class_slot_id") REFERENCES "class_slots"("class_slot_id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "senior_high_classes" ADD CONSTRAINT "senior_high_classes_class_slot_id_fkey" FOREIGN KEY ("class_slot_id") REFERENCES "class_slots"("class_slot_id") ON DELETE SET NULL ON UPDATE CASCADE;

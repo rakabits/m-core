@@ -1,0 +1,6 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hasPermission } from "@/modules/rbac/authorization";
+import { addClassSlot } from "@/modules/class-catalog/service";
+async function actor() { const supabase = await createSupabaseServerClient(); return (await supabase.auth.getUser()).data.user; }
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) { try { const user=await actor(); if(!user)return NextResponse.json({success:false,error:{code:"UNAUTHORIZED"}},{status:401}); if(!(await hasPermission(user.id,"program.update")))return NextResponse.json({success:false,error:{code:"FORBIDDEN"}},{status:403}); const {id}=await params; const body=await request.json(); if(typeof body.suffix!=="string"||!body.suffix.trim())return NextResponse.json({success:false,error:{code:"VALIDATION_ERROR"}},{status:422}); return NextResponse.json({success:true,data:await addClassSlot(id,body.suffix,body.capacity==null?null:Number(body.capacity))},{status:201}); } catch(error:unknown) { if((error as {code?:string})?.code==="P2002")return NextResponse.json({success:false,error:{code:"DUPLICATE_CLASS_SLOT"}},{status:409}); console.error(error); return NextResponse.json({success:false,error:{code:"CLASS_SLOT_CREATE_FAILED"}},{status:500}); } }

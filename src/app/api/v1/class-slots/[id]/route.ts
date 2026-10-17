@@ -1,0 +1,6 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { hasPermission } from "@/modules/rbac/authorization";
+import { updateClassSlot } from "@/modules/class-catalog/service";
+async function actor() { const supabase = await createSupabaseServerClient(); return (await supabase.auth.getUser()).data.user; }
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) { try { const user=await actor(); if(!user)return NextResponse.json({success:false,error:{code:"UNAUTHORIZED"}},{status:401}); if(!(await hasPermission(user.id,"program.update")))return NextResponse.json({success:false,error:{code:"FORBIDDEN"}},{status:403}); const {id}=await params; const body=await request.json(); const data:{capacity?:number|null;isActive?:boolean}={}; if(body.capacity!==undefined)data.capacity=body.capacity==null?null:Number(body.capacity); if(body.isActive!==undefined)data.isActive=Boolean(body.isActive); return NextResponse.json({success:true,data:await updateClassSlot(id,data)}); } catch(error){console.error(error);return NextResponse.json({success:false,error:{code:"CLASS_SLOT_UPDATE_FAILED"}},{status:500});} }
