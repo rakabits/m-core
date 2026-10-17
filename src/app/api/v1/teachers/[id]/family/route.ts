@@ -1,0 +1,4 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/core/database/prisma';
+export async function PATCH(request:NextRequest,context:{params:Promise<{id:string}>}){try{const {id}=await context.params;const body=await request.json();const data=await prisma.teacherFamily.updateMany({where:{id:body.id,teacherId:id},data:{relation:body.relation,fullName:body.fullName}});return NextResponse.json({success:true,data})}catch(error){return NextResponse.json({success:false,error:{message:error instanceof Error?error.message:'Gagal memperbarui keluarga.'}},{status:400})}}
+export async function DELETE(request:NextRequest,context:{params:Promise<{id:string}>}){try{const {id}=await context.params;const body=await request.json();await prisma.teacherFamily.deleteMany({where:{id:body.id,teacherId:id}});return NextResponse.json({success:true})}catch{return NextResponse.json({success:false,error:{message:'Gagal menghapus keluarga.'}},{status:400})}}

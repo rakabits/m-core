@@ -880,10 +880,106 @@ model Teacher {
   classes       AcademicClass[]
   homeRoomClasses AcademicClass[] @relation("ClassHomeRoom")
   schedules     Schedule[]
+  assignments   TeacherAssignment[]
+  educationHistories TeacherEducation[]
+  spouseLinks   TeacherSpouse[] @relation("TeacherSpouseOwner")
+  spouseOf      TeacherSpouse[] @relation("TeacherSpousePartner")
+  familyMembers TeacherFamily[]
+  documentRecords TeacherDocument[] @relation("TeacherDocuments")
 
   @@index([displayName])
   @@index([isActive])
   @@map("teachers")
+}
+
+enum TeacherMaritalStatus {
+  SINGLE
+  MARRIED
+  DIVORCED
+}
+
+enum TeacherEmploymentStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  RETIRED
+}
+
+enum TeacherEducationStatus {
+  GRADUATED
+  IN_PROGRESS
+  INCOMPLETE
+}
+
+enum TeacherDocumentType {
+  ID_CARD
+  FAMILY_CARD
+  DIPLOMA
+  EMPLOYMENT
+  OTHER
+}
+
+model TeacherAssignment {
+  id String @id @default(uuid()) @map("teacher_assignment_id")
+  teacherId String @map("teacher_id")
+  unit String @db.VarChar(100)
+  position String @db.VarChar(120)
+  startedAt DateTime @map("started_at") @db.Date
+  endedAt DateTime? @map("ended_at") @db.Date
+  notes String? @db.Text
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  @@index([teacherId, endedAt])
+  @@map("teacher_assignments")
+}
+
+model TeacherEducation {
+  id String @id @default(uuid()) @map("teacher_education_id")
+  teacherId String @map("teacher_id")
+  level String @db.VarChar(50)
+  institutionName String @map("institution_name") @db.VarChar(180)
+  studyProgram String? @map("study_program") @db.VarChar(150)
+  city String? @db.VarChar(100)
+  startedYear Int? @map("started_year")
+  graduatedYear Int? @map("graduated_year")
+  status TeacherEducationStatus @default(GRADUATED)
+  notes String? @db.Text
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  @@index([teacherId])
+  @@map("teacher_educations")
+}
+
+model TeacherSpouse {
+  id String @id @default(uuid()) @map("teacher_spouse_id")
+  teacherId String @unique @map("teacher_id")
+  isMumtazaStaff Boolean @default(false) @map("is_mumtaza_staff")
+  partnerTeacherId String? @map("partner_teacher_id")
+  manualName String? @map("manual_name") @db.VarChar(150)
+  relationship String @db.VarChar(20)
+  teacher Teacher @relation("TeacherSpouseOwner", fields: [teacherId], references: [id], onDelete: Cascade)
+  partnerTeacher Teacher? @relation("TeacherSpousePartner", fields: [partnerTeacherId], references: [id], onDelete: SetNull)
+  @@map("teacher_spouses")
+}
+
+model TeacherFamily {
+  id String @id @default(uuid()) @map("teacher_family_id")
+  teacherId String @map("teacher_id")
+  relation String @db.VarChar(30)
+  fullName String @map("full_name") @db.VarChar(150)
+  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  @@unique([teacherId, relation])
+  @@map("teacher_family")
+}
+
+model TeacherDocument {
+  id String @id @default(uuid()) @map("teacher_document_id")
+  teacherId String @map("teacher_id")
+  type TeacherDocumentType
+  title String @db.VarChar(180)
+  fileUrl String @map("file_url") @db.VarChar(500)
+  uploadedAt DateTime @default(now()) @map("uploaded_at") @db.Timestamptz()
+  teacher Teacher @relation("TeacherDocuments", fields: [teacherId], references: [id], onDelete: Cascade)
+  @@index([teacherId, type])
+  @@map("teacher_documents")
 }
 
 enum AttendanceStatus {
