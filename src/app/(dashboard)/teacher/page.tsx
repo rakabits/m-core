@@ -37,6 +37,7 @@ type Form = {
     endedAt: string;
     notes: string;
     documentFileName: string;
+    documentFileUrl?: string;
   }>;
   // D. Pendidikan
   educations: Array<{
@@ -49,6 +50,7 @@ type Form = {
     status: string;
     notes: string;
     certificateFileName: string;
+    certificateFileUrl?: string;
   }>;
   // E. Pasangan
   spouseIsStaff: string;
@@ -62,9 +64,13 @@ type Form = {
   motherPhone: string;
   // G. Dokumen
   ktpFile: string;
+  ktpFileUrl?: string;
   kkFile: string;
+  kkFileUrl?: string;
   employmentDocFile: string;
+  employmentDocFileUrl?: string;
   otherDocFile: string;
+  otherDocFileUrl?: string;
 };
 
 const empty: Form = {
@@ -103,6 +109,16 @@ export default function MasterTeacherPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
+
+  // File upload state for Cloudinary
+  const [uploadFiles, setUploadFiles] = useState<{
+    ktp?: File | null;
+    kk?: File | null;
+    employmentDoc?: File | null;
+    otherDoc?: File | null;
+    assignments?: { [idx: number]: File };
+    educations?: { [idx: number]: File };
+  }>({});
 
   const load = async () => {
     setLoading(true);
@@ -169,10 +185,44 @@ export default function MasterTeacherPage() {
       if (!res.ok || !body.success) throw new Error(body.error?.message ?? 'Gagal menyimpan profil guru.');
       const teacherId = body.data.id;
 
-      // C. Assignment/Jabatan (Multi-unit)
-      for (const item of form.assignments) {
+      // Helper upload ke Cloudinary dengan folder kategori
+      const uploadToCloudinary = async (file: File, type: string) => {
+        const data = new FormData();
+        data.append('file', file);
+        data.append('type', type);
+        data.append('teacherId', teacherId);
+        const uploadRes = await fetch('/api/v1/teachers/documents/upload', {
+          method: 'POST',
+          body: data
+        });
+        const uploadJson = await uploadRes.json();
+        if (uploadJson.success && uploadJson.data?.fileUrl) {
+          // Rekam metadata dokumen ke database Supabase
+          await fetch(`/api/v1/teachers/${teacherId}/documents`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              type: type === 'ASSIGNMENT' ? 'EMPLOYMENT' : type,
+              title: file.name,
+              fileUrl: uploadJson.data.fileUrl
+            })
+          });
+          return uploadJson.data.fileUrl as string;
+        }
+        return null;
+      };
+
+      // C. Assignment/Jabatan (Multi-unit) & Upload Surat Tugas
+      for (let i = 0; i < form.assignments.length; i++) {
+        const item = form.assignments[i];
         if (item.unit && item.position) {
-          await fetch(`/api/v1/teachers/${teacherId}/assignments`, {
+          let docUrl = item.documentFileUrl || null;
+          const assignedFile = uploadFiles.assignments?.[i];
+          if (assignedFile) {
+            docUrl = await uploadToCloudinary(assignedFile, 'ASSIGNMENT');
+          }
+
+          const assignmentResponse = await fetch(`/api/v1/teachers/${teacherId}/assignments`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -183,13 +233,30 @@ export default function MasterTeacherPage() {
               notes: item.notes || null
             })
           });
+          if (!assignmentResponse.ok) throw new Error('Gagal menyimpan unit atau jabatan guru.');
+
+          if (docUrl && !assignedFile) {
+            await fetch(`/api/v1/teachers/${teacherId}/documents`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: 'EMPLOYMENT', title: item.documentFileName || 'Surat Tugas / SK Jabatan', fileUrl: docUrl })
+            });
+          }
         }
       }
 
-      // D. Riwayat Pendidikan (Multi-jenjang)
-      for (const edu of (form.educations ?? [])) {
+      // D. Riwayat Pendidikan (Multi-jenjang) & Upload Ijazah
+      const edus = form.educations ?? [];
+      for (let i = 0; i < edus.length; i++) {
+        const edu = edus[i];
         if (edu.institutionName) {
-          await fetch(`/api/v1/teachers/${teacherId}/education`, {
+          let certUrl = edu.certificateFileUrl || null;
+          const certFile = uploadFiles.educations?.[i];
+          if (certFile) {
+            certUrl = await uploadToCloudinary(certFile, 'DIPLOMA');
+          }
+
+          const educationResponse = await fetch(`/api/v1/teachers/${teacherId}/education`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -197,11 +264,29 @@ export default function MasterTeacherPage() {
               institutionName: edu.institutionName,
               studyProgram: edu.studyProgram || null,
               city: edu.institutionCity || null,
-              graduatedYear: edu.graduatedYear ? Number(edu.graduatedYear) : null
+              startedYear: edu.startedYear ? Number(edu.startedYear) : null,
+              graduatedYear: edu.graduatedYear ? Number(edu.graduatedYear) : null,
+              status: edu.status || 'GRADUATED',
+              notes: edu.notes || null
             })
           });
+          if (!educationResponse.ok) throw new Error('Gagal menyimpan riwayat pendidikan guru.');
+
+          if (certUrl && !certFile) {
+            await fetch(`/api/v1/teachers/${teacherId}/documents`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ type: 'DIPLOMA', title: edu.certificateFileName || 'Ijazah / Sertifikat', fileUrl: certUrl })
+            });
+          }
         }
       }
+
+      // G. Dokumen Identitas & Kepegawaian ke Cloudinary
+      if (uploadFiles.ktp) await uploadToCloudinary(uploadFiles.ktp, 'ID_CARD');
+      if (uploadFiles.kk) await uploadToCloudinary(uploadFiles.kk, 'FAMILY_CARD');
+      if (uploadFiles.employmentDoc) await uploadToCloudinary(uploadFiles.employmentDoc, 'EMPLOYMENT');
+      if (uploadFiles.otherDoc) await uploadToCloudinary(uploadFiles.otherDoc, 'OTHER');
 
       // E. Data Pasangan
       if (form.maritalStatus === 'MARRIED') {
@@ -236,6 +321,7 @@ export default function MasterTeacherPage() {
 
       setOpen(false);
       setForm(empty);
+      setUploadFiles({});
       setStep(0);
       await load();
     } catch (err) {
@@ -832,8 +918,15 @@ export default function MasterTeacherPage() {
                                   type="file"
                                   accept="image/*,application/pdf"
                                   onChange={(e) => {
-                                    const fileName = e.target.files?.[0]?.name ?? '';
+                                    const selectedFile = e.target.files?.[0] ?? null;
+                                    const fileName = selectedFile?.name ?? '';
                                     updateAssignment('documentFileName', fileName);
+                                    if (selectedFile) {
+                                      setUploadFiles((prev) => ({
+                                        ...prev,
+                                        assignments: { ...(prev.assignments ?? {}), [aIdx]: selectedFile }
+                                      }));
+                                    }
                                   }}
                                 />
                                 {item.documentFileName && (
@@ -1052,8 +1145,15 @@ export default function MasterTeacherPage() {
                                 type="file"
                                 accept="image/*,application/pdf"
                                 onChange={(e) => {
-                                  const fileName = e.target.files?.[0]?.name ?? '';
+                                  const selectedFile = e.target.files?.[0] ?? null;
+                                  const fileName = selectedFile?.name ?? '';
                                   updateEdu('certificateFileName', fileName);
+                                  if (selectedFile) {
+                                    setUploadFiles((prev) => ({
+                                      ...prev,
+                                      educations: { ...(prev.educations ?? {}), [eIdx]: selectedFile }
+                                    }));
+                                  }
                                 }}
                               />
                               {edu.certificateFileName && (
@@ -1160,7 +1260,13 @@ export default function MasterTeacherPage() {
                     <input
                       type="file"
                       accept="image/*,application/pdf"
-                      onChange={(e) => e.target.files?.[0] && setForm({ ...form, ktpFile: e.target.files[0].name })}
+                      onChange={(e) => {
+                        const selectedFile = e.target.files?.[0] ?? null;
+                        if (selectedFile) {
+                          setForm({ ...form, ktpFile: selectedFile.name });
+                          setUploadFiles((prev) => ({ ...prev, ktp: selectedFile }));
+                        }
+                      }}
                     />
                   </label>
                   <label>
@@ -1168,7 +1274,13 @@ export default function MasterTeacherPage() {
                     <input
                       type="file"
                       accept="image/*,application/pdf"
-                      onChange={(e) => e.target.files?.[0] && setForm({ ...form, kkFile: e.target.files[0].name })}
+                      onChange={(e) => {
+                        const selectedFile = e.target.files?.[0] ?? null;
+                        if (selectedFile) {
+                          setForm({ ...form, kkFile: selectedFile.name });
+                          setUploadFiles((prev) => ({ ...prev, kk: selectedFile }));
+                        }
+                      }}
                     />
                   </label>
                   <label>
@@ -1176,7 +1288,13 @@ export default function MasterTeacherPage() {
                     <input
                       type="file"
                       accept="image/*,application/pdf"
-                      onChange={(e) => e.target.files?.[0] && setForm({ ...form, employmentDocFile: e.target.files[0].name })}
+                      onChange={(e) => {
+                        const selectedFile = e.target.files?.[0] ?? null;
+                        if (selectedFile) {
+                          setForm({ ...form, employmentDocFile: selectedFile.name });
+                          setUploadFiles((prev) => ({ ...prev, employmentDoc: selectedFile }));
+                        }
+                      }}
                     />
                   </label>
                   <label style={{ gridColumn: '1 / -1' }}>
@@ -1184,7 +1302,13 @@ export default function MasterTeacherPage() {
                     <input
                       type="file"
                       accept="image/*,application/pdf"
-                      onChange={(e) => e.target.files?.[0] && setForm({ ...form, otherDocFile: e.target.files[0].name })}
+                      onChange={(e) => {
+                        const selectedFile = e.target.files?.[0] ?? null;
+                        if (selectedFile) {
+                          setForm({ ...form, otherDocFile: selectedFile.name });
+                          setUploadFiles((prev) => ({ ...prev, otherDoc: selectedFile }));
+                        }
+                      }}
                     />
                   </label>
                 </>
