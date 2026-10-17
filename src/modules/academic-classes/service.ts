@@ -93,9 +93,10 @@ export async function getClassDetail(classId: string) {
       homeRoomTeacher: { select: { id: true, displayName: true, employeeCode: true } },
       enrollments: {
         where: { endedAt: null },
-        include: {
-          student: {
-            select: {
+          include: {
+            history: { select: { id: true, academicYear: true, status: true } },
+            student: {
+              select: {
               id: true,
               studentNumber: true,
               fullName: true,

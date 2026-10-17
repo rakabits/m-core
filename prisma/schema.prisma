@@ -456,10 +456,8 @@ model StudentProgramHistory {
   program         Program          @relation(fields: [programId], references: [id], onDelete: Restrict, onUpdate: Cascade)
   classEnrollment ClassEnrollment?
 
-  // Unique constraint: satu siswa tidak boleh memiliki duplikasi history
-  // untuk program dan tahun akademik yang sama.
-  // Referensi: DATABASE.md Ã‚Â§21
-  @@unique([studentId, programId, academicYear], name: "uq_student_program_year")
+  // Multiple immutable history records are allowed for re-enrollment after transfer/drop.
+  @@index([studentId, programId, academicYear], name: "idx_student_program_year")
   // Indeks untuk performa query.
   @@index([studentId])
   @@index([programId])

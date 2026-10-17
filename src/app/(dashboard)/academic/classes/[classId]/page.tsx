@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 type Teacher = { id: string; displayName: string; employeeCode: string | null };
 type Student = { id: string; studentNumber: number; fullName: string; gender: 'male' | 'female'; status: string };
-type Enrollment = { id: string; assignedAt: string; student: Student };
+type Enrollment = { id: string; assignedAt: string; student: Student; history: { id: string; academicYear: string; status: string } };
 type ClassDetail = {
   id: string;
   code: string;
@@ -33,6 +33,19 @@ export default function ClassDetailPage() {
   const [notice, setNotice] = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState('');
   const [search, setSearch] = useState('');
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentResults, setStudentResults] = useState<Array<{ id: string; studentNumber: number; fullName: string; email: string | null }>>([]);
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollmentError, setEnrollmentError] = useState('');
+  const [enrollmentNotice, setEnrollmentNotice] = useState('');
+  const [promotion, setPromotion] = useState<{ studentId: string; historyId: string; name: string } | null>(null);
+  const [promotionAction, setPromotionAction] = useState<'promote' | 'transfer' | 'drop'>('promote');
+  const [promotionClassId, setPromotionClassId] = useState('');
+  const [promotionNote, setPromotionNote] = useState('');
+  const [promotionSaving, setPromotionSaving] = useState(false);
+  const [promotionClasses, setPromotionClasses] = useState<Array<{ id: string; name: string; code: string }>>([]);
 
   async function loadDetail() {
     const res = await fetch(`/api/v1/academic-classes/${classId}`, { cache: 'no-store' });
@@ -82,9 +95,49 @@ export default function ClassDetailPage() {
     }
   }
 
-  const filteredStudents = detail?.enrollments.filter((en) =>
-    search === '' || en.student.fullName.toLowerCase().includes(search.toLowerCase())
-  ) ?? [];
+  async function searchStudents(value: string) {
+    setStudentSearch(value);
+    setSelectedStudent(null);
+    if (value.trim().length < 2) { setStudentResults([]); return; }
+    const response = await fetch(`/api/v1/students/search?q=${encodeURIComponent(value)}`, { cache: 'no-store' });
+    const body = await response.json() as { success: boolean; data?: typeof studentResults };
+    if (body.success) setStudentResults(body.data ?? []);
+  }
+
+  async function enrollSelectedStudent() {
+    if (!selectedStudent) return;
+    setEnrolling(true); setEnrollmentError('');
+    try {
+      const response = await fetch(`/api/v1/academic-classes/${classId}/enrollments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentId: selectedStudent }) });
+      const body = await response.json() as { success: boolean; error?: { message: string } };
+      if (!response.ok || !body.success) throw new Error(body.error?.message ?? 'Gagal menambahkan siswa.');
+      setAddStudentOpen(false); setStudentSearch(''); setStudentResults([]); setSelectedStudent(null); setEnrollmentNotice('Siswa berhasil ditambahkan ke kelas.');
+      await loadDetail();
+    } catch (err) { setEnrollmentError(err instanceof Error ? err.message : 'Gagal menambahkan siswa.'); } finally { setEnrolling(false); }
+  }
+
+  async function openPromotion(student: Enrollment) {
+    setPromotion({ studentId: student.student.id, historyId: student.history.id, name: student.student.fullName });
+    setPromotionAction('promote'); setPromotionClassId(''); setPromotionNote(''); setError('');
+    try {
+      const response = await fetch(`/api/v1/academic-classes?programId=${encodeURIComponent(detail?.program.id ?? '')}&academicYear=${encodeURIComponent(detail?.academicYear.code ?? '')}`, { cache: 'no-store' });
+      const body = await response.json() as { success: boolean; data?: Array<{ id: string; name: string; code: string }> };
+      if (body.success) setPromotionClasses((body.data ?? []).filter((item) => item.id !== detail?.id));
+    } catch { setPromotionClasses([]); }
+  }
+
+  async function submitPromotion() {
+    if (!promotion) return;
+    setPromotionSaving(true); setError('');
+    try {
+      const response = await fetch(`/api/v1/students/${promotion.studentId}/promote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromHistoryId: promotion.historyId, action: promotionAction, toClassId: promotionAction === 'promote' ? promotionClassId : undefined, notes: promotionNote || undefined }) });
+      const body = await response.json() as { success: boolean; error?: { message: string } };
+      if (!response.ok || !body.success) throw new Error(body.error?.message ?? 'Gagal memproses aksi siswa.');
+      setPromotion(null); setPromotionClassId(''); setPromotionNote(''); setNotice(promotionAction === 'promote' ? 'Siswa berhasil dipromosikan.' : promotionAction === 'transfer' ? 'Siswa berhasil ditandai pindah.' : 'Siswa berhasil dikeluarkan.'); await loadDetail();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Gagal memproses aksi siswa.'); } finally { setPromotionSaving(false); }
+  }
+
+  const filteredStudents = detail?.enrollments.filter((en) => search === '' || en.student.fullName.toLowerCase().includes(search.toLowerCase())) ?? [];
 
   if (loading) return <main className="class-detail-page"><div className="class-empty"><span>⋯</span><strong>Memuat...</strong></div></main>;
   if (!detail) return <main className="class-detail-page"><div className="class-empty"><span>⚠</span><strong>{error || 'Kelas tidak ditemukan.'}</strong><Link href="/academic/classes">← Kembali</Link></div></main>;
@@ -187,9 +240,9 @@ export default function ClassDetailPage() {
               <span className="section-kicker">DAFTAR SISWA</span>
               <h2>Siswa Terdaftar <em>·</em> {enrolledCount} orang</h2>
             </div>
-            <Link href={`/academic/classes/${classId}/add-student`} className="primary-button">
+            <button type="button" className="primary-button" onClick={() => { setAddStudentOpen(true); setEnrollmentError(''); setEnrollmentNotice(''); }}>
               + Tambah Siswa
-            </Link>
+            </button>
           </div>
 
           <input
@@ -223,15 +276,27 @@ export default function ClassDetailPage() {
                   <span className="student-name">{en.student.fullName}</span>
                   <span className={`gender-badge ${en.student.gender}`}>{genderLabel[en.student.gender]}</span>
                   <span className={`status-badge ${en.student.status}`}>{en.student.status}</span>
-                  <span className="enrolled-date">
-                    {new Date(en.assignedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </span>
+                  <span className="enrolled-date">{new Date(en.assignedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                  <button type="button" className="roster-action" onClick={(event) => { event.preventDefault(); void openPromotion(en); }} aria-label={`Kelola ${en.student.fullName}`}>•••</button>
                 </Link>
               ))}
             </div>
           )}
         </section>
       </div>
+
+      {promotion && <div className="enrollment-modal-backdrop" role="presentation" onClick={() => setPromotion(null)}><section className="enrollment-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><div className="enrollment-modal-header"><div><span className="section-kicker">STUDENT LIFECYCLE</span><h2>Kelola {promotion.name}</h2></div><button type="button" className="modal-close" onClick={() => setPromotion(null)}>×</button></div><p className="modal-description">Pilih tindakan untuk enrollment aktif siswa.</p><div className="promotion-tabs">{(['promote', 'transfer', 'drop'] as const).map((action) => <button type="button" className={promotionAction === action ? 'active' : ''} key={action} onClick={() => setPromotionAction(action)}>{action === 'promote' ? 'Naik kelas' : action === 'transfer' ? 'Pindah' : 'Keluarkan'}</button>)}</div>{promotionAction === 'promote' && <label className="promotion-field">Kelas tujuan<select value={promotionClassId} onChange={(event) => setPromotionClassId(event.target.value)}><option value="">Pilih kelas tujuan</option>{promotionClasses.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label>}<label className="promotion-field">Catatan<textarea value={promotionNote} onChange={(event) => setPromotionNote(event.target.value)} placeholder="Opsional" /></label><div className="modal-actions"><button type="button" className="detail-button" onClick={() => setPromotion(null)}>Batal</button><button type="button" className="primary-button" disabled={promotionSaving || (promotionAction === 'promote' && !promotionClassId)} onClick={() => void submitPromotion()}>{promotionSaving ? 'Memproses...' : 'Simpan tindakan'}</button></div></section></div>}
+
+      {addStudentOpen && <div className="enrollment-modal-backdrop" role="presentation" onClick={() => setAddStudentOpen(false)}>
+        <section className="enrollment-modal" role="dialog" aria-modal="true" aria-labelledby="add-student-title" onClick={(event) => event.stopPropagation()}>
+          <div className="enrollment-modal-header"><div><span className="section-kicker">ENROLLMENT</span><h2 id="add-student-title">Tambah Siswa ke Kelas</h2></div><button type="button" className="modal-close" onClick={() => setAddStudentOpen(false)} aria-label="Tutup">×</button></div>
+          <p className="modal-description">Cari siswa lama berdasarkan nama, NIK, atau nomor siswa.</p>
+          <input autoFocus className="class-search" type="search" placeholder="Ketik minimal 2 karakter..." value={studentSearch} onChange={(event) => void searchStudents(event.target.value)} />
+          {enrollmentError && <div className="academic-notice error"><span>!</span>{enrollmentError}</div>}
+          <div className="student-picker-results">{studentResults.length === 0 && studentSearch.length >= 2 ? <p className="picker-empty">Siswa tidak ditemukan.</p> : studentResults.map((student) => <button type="button" key={student.id} className={`student-picker-option ${selectedStudent === student.id ? 'selected' : ''}`} onClick={() => setSelectedStudent(student.id)}><span className="picker-avatar">{student.fullName.slice(0, 1).toUpperCase()}</span><span><strong>{student.fullName}</strong><small>No. {student.studentNumber}{student.email ? ` · ${student.email}` : ''}</small></span><span className="picker-check">{selectedStudent === student.id ? '✓' : ''}</span></button>)}</div>
+          <div className="modal-actions"><button type="button" className="detail-button" onClick={() => setAddStudentOpen(false)}>Batal</button><button type="button" className="primary-button" disabled={!selectedStudent || enrolling} onClick={() => void enrollSelectedStudent()}>{enrolling ? 'Menambahkan...' : 'Tambahkan ke Kelas'}</button></div>
+        </section>
+      </div>}
     </main>
   );
 }
