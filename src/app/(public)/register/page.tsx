@@ -52,8 +52,8 @@ function parseNotes(raw?: string | null): ParsedNotes {
         facilities: Array.isArray(parsed.facilities)
           ? parsed.facilities
           : parsed.facilities
-          ? String(parsed.facilities).split('\n').filter(Boolean)
-          : [],
+            ? String(parsed.facilities).split('\n').filter(Boolean)
+            : [],
         bookletUrl: parsed.bookletUrl || '',
         thumbnailUrl: parsed.thumbnailUrl || '',
       };
@@ -147,6 +147,60 @@ export default function VisitorRegistrationCatalogPage() {
     const meta = getProgramMeta(item.program.programCode, item.program.programName);
     return meta.category.toUpperCase().includes(selectedFilter);
   });
+
+  const [whatsappOpen, setWhatsappOpen] = useState(false);
+
+  const whatsappAdmins = [
+    {
+      name: 'Pon-Pes Mumtaza',
+      phone: '6281133333451',
+      displayPhone: '+62 811-3333-3451',
+      desc: 'Info pendaftaran MTs & MA Mumtaza',
+      message: 'Halo Admin Pon-Pes Mumtaza, saya ingin menanyakan informasi pendaftaran dan program di Mumtaza.',
+    },
+    {
+      name: 'Al-Azhar Mesir',
+      phone: '6281133333410',
+      displayPhone: '+62 811-3333-3410',
+      desc: 'Konsultasi Pra-Universitas Al-Azhar Mesir',
+      message: 'Halo Admin Al-Azhar Mesir, saya ingin menanyakan informasi pendaftaran program studi ke Al-Azhar Mesir.',
+    },
+    {
+      name: 'Turki',
+      phone: '6281133333411',
+      displayPhone: '+62 811-3333-3411',
+      desc: 'Konsultasi Studi & Kuliah di Turki',
+      message: 'Halo Admin Program Turki, saya ingin menanyakan informasi pendaftaran kuliah dan persiapan studi ke Turki.',
+    },
+    {
+      name: 'Jordan',
+      phone: '6281133333451',
+      displayPhone: '+62 811-3333-3451',
+      desc: 'Konsultasi Studi ke Yordania / Jordan',
+      message: 'Halo Admin Program Jordan, saya ingin menanyakan informasi pendaftaran program studi ke Yordania.',
+    },
+    {
+      name: 'Pakistan',
+      phone: '6281133333451',
+      displayPhone: '+62 811-3333-3451',
+      desc: 'Konsultasi Studi ke Pakistan',
+      message: 'Halo Admin Program Pakistan, saya ingin menanyakan informasi pendaftaran program studi ke Pakistan.',
+    },
+    {
+      name: 'China',
+      phone: '6281133333410',
+      displayPhone: '+62 811-3333-3410',
+      desc: 'Konsultasi Studi & Beasiswa ke China',
+      message: 'Halo Admin Program China, saya ingin menanyakan informasi pendaftaran dan persiapan studi ke China.',
+    },
+    {
+      name: 'Timur Tengah',
+      phone: '6281133333410',
+      displayPhone: '+62 811-3333-3410',
+      desc: 'Konsultasi Studi Kawasan Timur Tengah',
+      message: 'Halo Admin Program Timur Tengah, saya ingin berkonsultasi mengenai program pendidikan ke Timur Tengah.',
+    },
+  ];
 
   return (
     <main className="visitor-catalog-page">
@@ -427,6 +481,78 @@ export default function VisitorRegistrationCatalogPage() {
           <p>© 2026 Mumtaza Core. Hak Cipta Dilindungi.</p>
         </div>
       </footer>
+
+      {/* Floating WhatsApp CTA & Program Admin Picker */}
+      <aside className="whatsapp-floating-container" aria-label="Bantuan WhatsApp">
+        {whatsappOpen && (
+          <div className="whatsapp-popup-menu" role="dialog" aria-modal="true" aria-label="Pilih Admin WhatsApp Program">
+            <div className="whatsapp-popup-header">
+              <div className="whatsapp-popup-header-info">
+                <div className="whatsapp-header-avatar">
+                  <svg viewBox="0 0 24 24" width="22" height="22">
+                    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4>Konsultasi WhatsApp</h4>
+                  <p>Hubungi admin program resmi</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="whatsapp-popup-close"
+                onClick={() => setWhatsappOpen(false)}
+                aria-label="Tutup menu WhatsApp"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="whatsapp-popup-body">
+              <p className="whatsapp-popup-note">Silakan pilih admin program yang ingin Anda hubungi:</p>
+              <div className="whatsapp-admin-list">
+                {whatsappAdmins.map((adm) => (
+                  <a
+                    key={adm.name}
+                    href={`https://wa.me/${adm.phone}?text=${encodeURIComponent(adm.message)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="whatsapp-admin-item"
+                    onClick={() => setWhatsappOpen(false)}
+                  >
+                    <div className="whatsapp-admin-info">
+                      <strong>{adm.name}</strong>
+                      <small>{adm.desc}</small>
+                    </div>
+                    <span className="whatsapp-admin-action" title="Buka chat WhatsApp">
+                      💬
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <button
+          type="button"
+          className="whatsapp-floating-btn"
+          onClick={() => setWhatsappOpen(!whatsappOpen)}
+          aria-expanded={whatsappOpen}
+          aria-label="Bantuan WhatsApp Pendaftaran"
+        >
+          <span className="whatsapp-pulse-ring" />
+          <span className="whatsapp-btn-icon">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="#ffffff">
+              <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2z" />
+            </svg>
+          </span>
+          <span className="whatsapp-btn-text">
+            {whatsappOpen ? 'Tutup Konsultasi' : 'Konsultasi Sekarang'}
+          </span>
+        </button>
+      </aside>
     </main>
   );
 }
+
