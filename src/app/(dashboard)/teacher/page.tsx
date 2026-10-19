@@ -124,6 +124,11 @@ export default function MasterTeacherPage() {
   const [editingTeacherId, setEditingTeacherId] = useState<string | null>(null);
   const [nikStatus, setNikStatus] = useState<'idle' | 'checking' | 'available' | 'duplicate'>('idle');
   const [stepWarning, setStepWarning] = useState('');
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [registrationNik, setRegistrationNik] = useState('');
+  const [registrationError, setRegistrationError] = useState('');
+  const [registrationLink, setRegistrationLink] = useState('');
+  const [registrationSaving, setRegistrationSaving] = useState(false);
 
   const validateStep = (currentStep: number) => {
     if (currentStep === 0) {
@@ -446,6 +451,30 @@ export default function MasterTeacherPage() {
     }
   };
 
+  const generateTeacherRegistrationLink = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const nik = registrationNik.trim();
+    if (!/^\d{16}$/.test(nik)) return setRegistrationError('NIK guru wajib terdiri dari 16 digit angka.');
+    setRegistrationSaving(true);
+    setRegistrationError('');
+    setRegistrationLink('');
+    try {
+      const checkResponse = await fetch(`/api/v1/teachers?nik=${encodeURIComponent(nik)}`, { cache: 'no-store' });
+      const check = await checkResponse.json();
+      if (!checkResponse.ok || !check.available) throw new Error('NIK sudah terdaftar pada Daftar Teacher.');
+      const teacherId = `G-${String(Math.max(0, ...teachers.map((teacher) => Number((teacher.employeeCode ?? '').replace(/^G-/, '')) || 0)) + 1).padStart(4, '0')}`;
+      const targetUrl = `${window.location.origin}/register/teacher/${teacherId}?nik=${encodeURIComponent(nik)}`;
+      const shortlinkResponse = await fetch('/api/v1/shortlinks', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: teacherId, targetUrl }) });
+      const result = await shortlinkResponse.json();
+      if (!shortlinkResponse.ok || !result.success) throw new Error(result.error?.message ?? 'Gagal membuat shortlink pendaftaran guru.');
+      setRegistrationLink(`${window.location.origin}/s/${result.data.code}`);
+    } catch (error) {
+      setRegistrationError(error instanceof Error ? error.message : 'Gagal membuat link pendaftaran guru.');
+    } finally {
+      setRegistrationSaving(false);
+    }
+  };
+
   const filtered = teachers.filter((t) => {
     const q = search.toLowerCase();
     const matchSearch = !q || t.displayName.toLowerCase().includes(q) || (t.employeeCode ?? '').toLowerCase().includes(q);
@@ -464,18 +493,23 @@ export default function MasterTeacherPage() {
           <h1>Master Teacher</h1>
           <p className="subtitle">Kelola direktori guru, data profil, kepegawaian, dan dokumen pengajar.</p>
         </div>
-        <button
-          className="primary-button"
-          type="button"
-          onClick={() => {
-            setForm(empty);
-            setStep(0);
-            setError('');
-            setOpen(true);
-          }}
-        >
-          + Guru baru
-        </button>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <button className="detail-button" type="button" onClick={() => { setRegistrationNik(''); setRegistrationError(''); setRegistrationLink(''); setRegistrationOpen(true); }}>
+            Generate Link Guru
+          </button>
+          <button
+            className="primary-button"
+            type="button"
+            onClick={() => {
+              setForm(empty);
+              setStep(0);
+              setError('');
+              setOpen(true);
+            }}
+          >
+            + Guru baru
+          </button>
+        </div>
       </header>
 
       {error && <div className="state error">{error}</div>}
@@ -1472,6 +1506,17 @@ export default function MasterTeacherPage() {
               )}
             </div>
           </form>
+        </div>
+      )}
+      {registrationOpen && (
+        <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setRegistrationOpen(false); }}>
+          <section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="teacher-registration-link-title">
+            <div className="modal-header">
+              <div><span className="eyebrow">TEACHER REGISTRATION</span><h2 id="teacher-registration-link-title">Generate Link Guru</h2></div>
+              <button className="modal-close" type="button" onClick={() => setRegistrationOpen(false)} aria-label="Tutup">×</button>
+            </div>
+            {registrationLink ? <div className="state" role="status"><p>Link pendaftaran guru berhasil dibuat.</p><strong>{registrationLink}</strong><button className="primary-button" type="button" onClick={() => void navigator.clipboard?.writeText(registrationLink)}>Salin link</button></div> : <form onSubmit={generateTeacherRegistrationLink} className="form-grid"><label>NIK guru baru<input id="teacher-registration-nik" inputMode="numeric" maxLength={16} value={registrationNik} onChange={(event) => setRegistrationNik(event.target.value.replace(/\D/g, ''))} placeholder="16 digit NIK" required /></label><p className="subtitle">NIK wajib diisi dan akan diperiksa agar tidak terjadi duplikasi.</p>{registrationError && <p className="form-error">{registrationError}</p>}<button className="primary-button" type="submit" disabled={registrationSaving}>{registrationSaving ? 'Membuat link…' : 'Generate Registration Link'}</button></form>}
+          </section>
         </div>
       )}
     </main>

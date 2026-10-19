@@ -17,7 +17,7 @@ async function main() {
   let students = 0;
   let teachers = 0;
   for (const student of await prisma.student.findMany({ include: { userProfile: true } })) {
-    const existingByEmail = student.email ? await prisma.userProfile.findUnique({ where: { email: student.email.toLowerCase() } }) : null;
+    const existingByEmail = student.email ? await prisma.userProfile.findUnique({ where: { email: student.email.toLowerCase() }, include: { teacher: true } }) : null;
     const reusableProfile = existingByEmail && !existingByEmail.studentId && !existingByEmail.teacher ? existingByEmail : null;
     const profile = student.userProfile ?? reusableProfile ?? await prisma.userProfile.create({ data: { authId: randomUUID(), email: reusableProfile ? student.email?.toLowerCase() ?? null : existingByEmail ? null : student.email?.toLowerCase() ?? null, passwordHash: passwordHash(DEFAULT_PASSWORD), studentId: student.id } });
     if (!student.userProfile && reusableProfile) await prisma.userProfile.update({ where: { id: reusableProfile.id }, data: { studentId: student.id, passwordHash: passwordHash(DEFAULT_PASSWORD) } });
