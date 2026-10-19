@@ -285,9 +285,7 @@ export default function VisitorRegistrationCatalogPage() {
                     {/* Card Body */}
                     <div className="program-card-body">
                       <div className="program-card-header">
-                        <span className="program-code-label">{period.program.programCode}</span>
-                        <h3 className="program-title">{period.program.programName}</h3>
-                        <p className="period-title">{period.name}</p>
+                        <h3 className="program-title">{period.name}</h3>
                       </div>
 
                       {/* Schedule info */}
@@ -344,13 +342,6 @@ export default function VisitorRegistrationCatalogPage() {
                           </ul>
                         )}
                       </div>
-
-                      {/* Form Template Meta */}
-                      {period.formTemplate && (
-                        <div className="template-note-pill">
-                          <span>📋 Formulir: {period.formTemplate.name}</span>
-                        </div>
-                      )}
                     </div>
 
                     {/* Card Footer Actions */}
