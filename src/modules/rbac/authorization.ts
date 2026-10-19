@@ -4,8 +4,17 @@ export type ScopeInput = { type: 'all' | 'program' | 'class'; programId?: string
 export function scopeAllowsClass(scope:ScopeInput, target:{programId:string;code:string}){return scope.type==='all'||(scope.type==='program'&&scope.programId===target.programId)||(scope.type==='class'&&scope.className===target.code)}
 
 export async function hasPermission(authId: string, permission: string) {
-  const user = await prisma.userProfile.findUnique({ where: { authId }, include: { roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } } } });
-  return Boolean(user?.isActive && user.roles.some(({ role }) => role.name === 'SUPER_ADMIN' || role.permissions.some(({ permission: item }) => item.code === permission)));
+  const user = await prisma.userProfile.findUnique({
+    where: { authId },
+    include: {
+      roles: { include: { role: { include: { permissions: { include: { permission: true } } } } } },
+      permissionGrants: { where: { granted: true }, include: { permission: true } },
+    },
+  });
+  if (!user?.isActive) return false;
+  if (user.roles.some(({ role }) => role.name === 'SUPER_ADMIN')) return true;
+  return user.permissionGrants.some(({ permission: item }) => item.code === permission)
+    || user.roles.some(({ role }) => role.permissions.some(({ permission: item }) => item.code === permission));
 }
 
 export async function getScopes(authId: string): Promise<ScopeInput[]> {
