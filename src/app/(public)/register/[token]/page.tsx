@@ -221,15 +221,15 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
         <section className="public-registration-card registration-form-card">
           <p className="eyebrow">M-CORE / REGISTRATION</p>
           <h1>Form Pendaftaran</h1>
-          <div className="registration-number" aria-label="Nomor registrasi">
-            <span>NO. REGISTRASI</span>
-            <strong>{item.registrationNo}</strong>
+          <div className="registration-number" aria-label="Status registrasi">
+            <span>STATUS FORMULIR</span>
+            <strong>{item.submittedAt ? item.registrationNo : 'PENDAFTARAN BARU'}</strong>
           </div>
 
           {done ? (
             <div className="success-panel">
               <h2>Data berhasil dikirim</h2>
-              <p>Nomor registrasi: <strong>{item.registrationNo}</strong></p>
+              <p>Nomor registrasi resmi Anda: <strong>{item.registrationNo}</strong></p>
               <p>Form Pendaftaran ini sudah diisi dan link sudah tidak berlaku.</p>
               <a
                 className="primary-button whatsapp-confirmation-button"
@@ -242,6 +242,7 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
               </a>
             </div>
           ) : (
+
             <form className="public-form" onSubmit={onSubmit}>
 
               {/* Wizard indicator */}
