@@ -492,13 +492,14 @@ model UserProfile {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  student     Student?             @relation(fields: [studentId], references: [id], onDelete: SetNull)
-  teacher     Teacher?
-  roles       UserRoleAssignment[]
-  scopes      ScopeAssignment[]
-  auditLogs   AuditLog[]
-  sessions    AuthSession[]
-  resetTokens PasswordResetToken[]
+  student          Student?              @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  teacher          Teacher?
+  roles            UserRoleAssignment[]
+  scopes           ScopeAssignment[]
+  auditLogs        AuditLog[]
+  sessions         AuthSession[]
+  resetTokens      PasswordResetToken[]
+  permissionGrants UserPermissionGrant[]
 
   @@map("user_profiles")
 }
@@ -543,12 +544,28 @@ model Role {
 }
 
 model Permission {
-  id          String           @id @default(uuid()) @map("permission_id")
-  code        String           @unique @db.VarChar(100)
-  description String?          @db.VarChar(255)
+  id          String                @id @default(uuid()) @map("permission_id")
+  code        String                @unique @db.VarChar(100)
+  description String?               @db.VarChar(255)
   roles       RolePermission[]
+  userGrants  UserPermissionGrant[]
 
   @@map("permissions")
+}
+
+model UserPermissionGrant {
+  userId       String   @map("user_id")
+  permissionId String   @map("permission_id")
+  granted      Boolean  @default(true)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz()
+
+  user       UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission  @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([userId, permissionId])
+  @@index([permissionId])
+  @@map("user_permission_grants")
 }
 
 model UserRoleAssignment {
@@ -659,27 +676,27 @@ model AcademicLevelSetting {
 
 /// Template baku nama grade per program. Nama grade TIDAK boleh diubah pengguna biasa.
 model ClassDefinition {
-  id            String        @id @default(uuid()) @map("class_def_id")
-  programId     String        @map("program_id")
+  id        String @id @default(uuid()) @map("class_def_id")
+  programId String @map("program_id")
 
   /// Nomor grade: 7, 8, 9 untuk MTs; 10, 11, 12 untuk MA.
-  grade         Int
+  grade Int
 
   /// Label nama grade yang baku. Contoh: "Kelas 7", "Kelas 10".
   /// Hanya dapat diubah oleh SUPER_ADMIN melalui form khusus dengan konfirmasi.
-  gradeLabel    String        @db.VarChar(30)   @map("grade_label")
+  gradeLabel String @map("grade_label") @db.VarChar(30)
 
   /// Jumlah rombel default saat program dibuat. Default 1.
-  defaultSlots  Int           @default(1)        @map("default_slots")
+  defaultSlots Int @default(1) @map("default_slots")
 
   /// Status aktif definisi kelas ini.
-  isActive      Boolean       @default(true)     @map("is_active")
+  isActive Boolean @default(true) @map("is_active")
 
-  createdAt     DateTime      @default(now())    @map("created_at") @db.Timestamptz()
-  updatedAt     DateTime      @updatedAt         @map("updated_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  program       Program       @relation(fields: [programId], references: [id], onDelete: Restrict)
-  slots         ClassSlot[]
+  program Program     @relation(fields: [programId], references: [id], onDelete: Restrict)
+  slots   ClassSlot[]
 
   /// Satu program hanya boleh punya satu ClassDefinition per grade.
   @@unique([programId, grade], name: "uq_class_def_program_grade")
@@ -691,25 +708,25 @@ model ClassDefinition {
 /// Rombel aktual per ClassDefinition. Satu grade bisa punya lebih dari 1 rombel (A, B, C, dst).
 /// displayName dikalkulasi: gradeLabel + " " + suffix (atau hanya gradeLabel jika suffix kosong).
 model ClassSlot {
-  id              String          @id @default(uuid()) @map("class_slot_id")
-  classDefId      String          @map("class_def_id")
+  id         String @id @default(uuid()) @map("class_slot_id")
+  classDefId String @map("class_def_id")
 
   /// Suffix rombel: "A", "B", "C", atau "" (kosong = hanya satu rombel tanpa suffix).
-  suffix          String          @db.VarChar(10)
+  suffix String @db.VarChar(10)
 
   /// Nama tampilan final. Contoh: "Kelas 7", "Kelas 7A", "Kelas 7B".
-  displayName     String          @db.VarChar(60)    @map("display_name")
+  displayName String @map("display_name") @db.VarChar(60)
 
   /// Kapasitas maksimal siswa per rombel. Opsional.
-  capacity        Int?
+  capacity Int?
 
   /// Status aktif rombel ini.
-  isActive        Boolean         @default(true)     @map("is_active")
+  isActive Boolean @default(true) @map("is_active")
 
-  createdAt       DateTime        @default(now())    @map("created_at") @db.Timestamptz()
-  updatedAt       DateTime        @updatedAt         @map("updated_at") @db.Timestamptz()
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  classDef        ClassDefinition @relation(fields: [classDefId], references: [id], onDelete: Restrict)
+  classDef          ClassDefinition   @relation(fields: [classDefId], references: [id], onDelete: Restrict)
   juniorHighClasses JuniorHighClass[]
   seniorHighClasses SeniorHighClass[]
 
@@ -790,16 +807,16 @@ model PreUniversityProgram {
 }
 
 model AcademicClass {
-  id                 String              @id @default(uuid()) @map("class_id")
-  programId          String              @map("program_id")
-  academicYearId     String              @map("academic_year_id")
-  code               String              @db.VarChar(50)
-  name               String              @db.VarChar(100)
-  capacity           Int?
-  isActive           Boolean             @default(true) @map("is_active")
+  id             String  @id @default(uuid()) @map("class_id")
+  programId      String  @map("program_id")
+  academicYearId String  @map("academic_year_id")
+  code           String  @db.VarChar(50)
+  name           String  @db.VarChar(100)
+  capacity       Int?
+  isActive       Boolean @default(true) @map("is_active")
 
   /// FK wali kelas. Berbeda dari teacher (guru pengajar) karena wali kelas hanya satu per kelas.
-  homeRoomTeacherId  String?             @map("home_room_teacher_id")
+  homeRoomTeacherId String? @map("home_room_teacher_id")
 
   createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz()
@@ -862,30 +879,30 @@ model AcademicMasterHistory {
 }
 
 model Teacher {
-  id            String          @id @default(uuid()) @map("teacher_id")
-  userProfileId String?         @unique @map("user_id")
-  employeeCode  String?         @unique @map("employee_code") @db.VarChar(50)
-  displayName   String          @map("display_name") @db.VarChar(150)
-  isActive      Boolean         @default(true) @map("is_active")
-  profile       Json?
-  address       Json?
-  employment    Json?
-  education     Json?
-  spouse        Json?
-  family        Json?
-  documents     Json?
-  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz()
-  userProfile   UserProfile?    @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
-  classes       AcademicClass[]
-  homeRoomClasses AcademicClass[] @relation("ClassHomeRoom")
-  schedules     Schedule[]
-  assignments   TeacherAssignment[]
+  id                 String              @id @default(uuid()) @map("teacher_id")
+  userProfileId      String?             @unique @map("user_id")
+  employeeCode       String?             @unique @map("employee_code") @db.VarChar(50)
+  displayName        String              @map("display_name") @db.VarChar(150)
+  isActive           Boolean             @default(true) @map("is_active")
+  profile            Json?
+  address            Json?
+  employment         Json?
+  education          Json?
+  spouse             Json?
+  family             Json?
+  documents          Json?
+  createdAt          DateTime            @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime            @updatedAt @map("updated_at") @db.Timestamptz()
+  userProfile        UserProfile?        @relation(fields: [userProfileId], references: [id], onDelete: SetNull)
+  classes            AcademicClass[]
+  homeRoomClasses    AcademicClass[]     @relation("ClassHomeRoom")
+  schedules          Schedule[]
+  assignments        TeacherAssignment[]
   educationHistories TeacherEducation[]
-  spouseLinks   TeacherSpouse[] @relation("TeacherSpouseOwner")
-  spouseOf      TeacherSpouse[] @relation("TeacherSpousePartner")
-  familyMembers TeacherFamily[]
-  documentRecords TeacherDocument[] @relation("TeacherDocuments")
+  spouseLinks        TeacherSpouse[]     @relation("TeacherSpouseOwner")
+  spouseOf           TeacherSpouse[]     @relation("TeacherSpousePartner")
+  familyMembers      TeacherFamily[]
+  documentRecords    TeacherDocument[]   @relation("TeacherDocuments")
 
   @@index([displayName])
   @@index([isActive])
@@ -920,64 +937,69 @@ enum TeacherDocumentType {
 }
 
 model TeacherAssignment {
-  id String @id @default(uuid()) @map("teacher_assignment_id")
-  teacherId String @map("teacher_id")
-  unit String @db.VarChar(100)
-  position String @db.VarChar(120)
-  startedAt DateTime @map("started_at") @db.Date
-  endedAt DateTime? @map("ended_at") @db.Date
-  notes String? @db.Text
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid()) @map("teacher_assignment_id")
+  teacherId String    @map("teacher_id")
+  unit      String    @db.VarChar(100)
+  position  String    @db.VarChar(120)
+  startedAt DateTime  @map("started_at") @db.Date
+  endedAt   DateTime? @map("ended_at") @db.Date
+  notes     String?   @db.Text
+  teacher   Teacher   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
   @@index([teacherId, endedAt])
   @@map("teacher_assignments")
 }
 
 model TeacherEducation {
-  id String @id @default(uuid()) @map("teacher_education_id")
-  teacherId String @map("teacher_id")
-  level String @db.VarChar(50)
-  institutionName String @map("institution_name") @db.VarChar(180)
-  studyProgram String? @map("study_program") @db.VarChar(150)
-  city String? @db.VarChar(100)
-  startedYear Int? @map("started_year")
-  graduatedYear Int? @map("graduated_year")
-  status TeacherEducationStatus @default(GRADUATED)
-  notes String? @db.Text
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id              String                 @id @default(uuid()) @map("teacher_education_id")
+  teacherId       String                 @map("teacher_id")
+  level           String                 @db.VarChar(50)
+  institutionName String                 @map("institution_name") @db.VarChar(180)
+  studyProgram    String?                @map("study_program") @db.VarChar(150)
+  city            String?                @db.VarChar(100)
+  startedYear     Int?                   @map("started_year")
+  graduatedYear   Int?                   @map("graduated_year")
+  status          TeacherEducationStatus @default(GRADUATED)
+  notes           String?                @db.Text
+  teacher         Teacher                @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
   @@index([teacherId])
   @@map("teacher_educations")
 }
 
 model TeacherSpouse {
-  id String @id @default(uuid()) @map("teacher_spouse_id")
-  teacherId String @unique @map("teacher_id")
-  isMumtazaStaff Boolean @default(false) @map("is_mumtaza_staff")
-  partnerTeacherId String? @map("partner_teacher_id")
-  manualName String? @map("manual_name") @db.VarChar(150)
-  relationship String @db.VarChar(20)
-  teacher Teacher @relation("TeacherSpouseOwner", fields: [teacherId], references: [id], onDelete: Cascade)
-  partnerTeacher Teacher? @relation("TeacherSpousePartner", fields: [partnerTeacherId], references: [id], onDelete: SetNull)
+  id               String   @id @default(uuid()) @map("teacher_spouse_id")
+  teacherId        String   @unique @map("teacher_id")
+  isMumtazaStaff   Boolean  @default(false) @map("is_mumtaza_staff")
+  partnerTeacherId String?  @map("partner_teacher_id")
+  manualName       String?  @map("manual_name") @db.VarChar(150)
+  relationship     String   @db.VarChar(20)
+  teacher          Teacher  @relation("TeacherSpouseOwner", fields: [teacherId], references: [id], onDelete: Cascade)
+  partnerTeacher   Teacher? @relation("TeacherSpousePartner", fields: [partnerTeacherId], references: [id], onDelete: SetNull)
+
   @@map("teacher_spouses")
 }
 
 model TeacherFamily {
-  id String @id @default(uuid()) @map("teacher_family_id")
-  teacherId String @map("teacher_id")
-  relation String @db.VarChar(30)
-  fullName String @map("full_name") @db.VarChar(150)
-  teacher Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  id        String  @id @default(uuid()) @map("teacher_family_id")
+  teacherId String  @map("teacher_id")
+  relation  String  @db.VarChar(30)
+  fullName  String  @map("full_name") @db.VarChar(150)
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
   @@unique([teacherId, relation])
   @@map("teacher_family")
 }
 
 model TeacherDocument {
-  id String @id @default(uuid()) @map("teacher_document_id")
-  teacherId String @map("teacher_id")
-  type TeacherDocumentType
-  title String @db.VarChar(180)
-  fileUrl String @map("file_url") @db.VarChar(500)
-  uploadedAt DateTime @default(now()) @map("uploaded_at") @db.Timestamptz()
-  teacher Teacher @relation("TeacherDocuments", fields: [teacherId], references: [id], onDelete: Cascade)
+  id         String              @id @default(uuid()) @map("teacher_document_id")
+  teacherId  String              @map("teacher_id")
+  type       TeacherDocumentType
+  title      String              @db.VarChar(180)
+  fileUrl    String              @map("file_url") @db.VarChar(500)
+  uploadedAt DateTime            @default(now()) @map("uploaded_at") @db.Timestamptz()
+  teacher    Teacher             @relation("TeacherDocuments", fields: [teacherId], references: [id], onDelete: Cascade)
+
   @@index([teacherId, type])
   @@map("teacher_documents")
 }
