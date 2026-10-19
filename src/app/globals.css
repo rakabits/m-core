@@ -924,7 +924,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 
 .program-card-header {
   min-height: 30px;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 
 .program-code-label {
@@ -958,7 +958,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
   gap: 8px;
   font-size: 11px;
   color: #64748b;
-  margin: 10px 0 14px;
+  margin: 6px 0 14px;
   padding: 7px 11px;
   background: #f8fafc;
   border-radius: 8px;
