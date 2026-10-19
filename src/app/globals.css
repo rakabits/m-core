@@ -740,11 +740,71 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
   box-shadow: 0 4px 12px rgba(24, 168, 155, 0.25);
 }
 
-/* Grid layout for Program Cards */
 .program-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
   gap: 28px;
+  overflow: hidden;
+  padding: 2px 2px 16px;
+}
+
+.program-carousel-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 6px;
+}
+
+.program-carousel-button {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 16px;
+  background: #fff;
+  color: var(--teal-dark);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.program-carousel-button:hover:not(:disabled) {
+  border-color: var(--teal);
+  background: #f1fbf9;
+  transform: translateY(-1px);
+}
+
+.program-carousel-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.program-carousel-button-primary {
+  border-color: var(--teal);
+  background: var(--teal);
+  color: #fff;
+}
+
+.program-carousel-button-primary:hover:not(:disabled) {
+  background: var(--teal-dark);
+  color: #fff;
+}
+
+.program-carousel-status {
+  min-width: 42px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.program-card-box {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  min-height: 680px;
 }
 
 .program-card-box {
@@ -768,15 +828,19 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 .program-card-thumb {
   position: relative;
   width: 100%;
-  height: 200px;
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 200px;
   overflow: hidden;
   background: #e2e8f0;
 }
 
 .program-card-thumb img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   transition: transform 0.5s ease;
 }
 
@@ -859,6 +923,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 }
 
 .program-card-header {
+  min-height: 30px;
   margin-bottom: 12px;
 }
 
@@ -905,6 +970,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 }
 
 .program-desc {
+  min-height: 58px;
   font-size: 12px;
   color: #475569;
   line-height: 1.6;
@@ -1000,6 +1066,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 /* Card Footer Actions */
 .program-card-footer {
   padding: 16px 24px 22px;
+  margin-top: auto;
   background: #ffffff;
   border-top: 1px solid #f1f5f9;
   display: flex;
@@ -1201,21 +1268,99 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 }
 
 @media (max-width: 640px) {
-  .program-cards-grid {
-    grid-template-columns: 1fr;
+  .landing-container {
+    width: min(100% - 28px, 1180px);
   }
+
+  .catalog-content-section {
+    padding: 32px 0 60px;
+  }
+
   .catalog-filter-bar {
     flex-direction: column;
     align-items: stretch;
+    gap: 16px;
+    margin-bottom: 22px;
   }
+
+  .catalog-filter-bar h2 {
+    font-size: 23px;
+  }
+
+  .catalog-tabs {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .catalog-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .catalog-tab {
+    flex: 0 0 auto;
+    padding: 9px 13px;
+    white-space: nowrap;
+  }
+
+  .program-cards-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    padding: 0 0 8px;
+  }
+
+  .program-card-box {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+  }
+
+  .program-card-thumb {
+    aspect-ratio: 16 / 9;
+    height: auto;
+    min-height: 0;
+  }
+
+  .program-card-body {
+    padding: 20px;
+  }
+
   .steps-grid {
     grid-template-columns: 1fr;
   }
+
   .program-card-footer {
     flex-direction: column;
+    align-items: stretch;
+    padding: 14px 20px 20px;
   }
-  .btn-booklet, .btn-enroll-now {
+
+  .btn-booklet,
+  .btn-enroll-now {
     width: 100%;
+  }
+
+  .program-carousel-controls {
+    gap: 8px;
+    justify-content: space-between;
+  }
+
+  .program-carousel-button {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+
+  .program-carousel-status {
+    flex: 0 0 34px;
+    min-width: 34px;
+  }
+
+  .whatsapp-floating-container {
+    right: 14px;
+    bottom: 14px;
   }
 }
 

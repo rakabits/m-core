@@ -14,6 +14,7 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ i
   if (body.name !== undefined) updateData.name = String(body.name).trim();
   if (body.notes !== undefined) updateData.notes = body.notes ? String(body.notes).trim() : null;
   if (body.formTemplateId !== undefined) updateData.formTemplateId = body.formTemplateId || null;
+  if (body.programId !== undefined) updateData.programId = String(body.programId);
   if (body.registrationFee !== undefined) updateData.registrationFee = Number(body.registrationFee);
   if (body.startsAt !== undefined) updateData.startsAt = new Date(body.startsAt);
   if (body.endsAt !== undefined) updateData.endsAt = new Date(body.endsAt);

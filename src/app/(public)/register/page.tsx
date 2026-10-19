@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -96,6 +96,7 @@ export default function VisitorRegistrationCatalogPage() {
   const [error, setError] = useState('');
   const [startingPeriodId, setStartingPeriodId] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>('ALL');
+  const [programPage, setProgramPage] = useState(0);
 
   useEffect(() => {
     async function fetchPeriods() {
@@ -147,6 +148,22 @@ export default function VisitorRegistrationCatalogPage() {
     const meta = getProgramMeta(item.program.programCode, item.program.programName);
     return meta.category.toUpperCase().includes(selectedFilter);
   });
+
+  const totalProgramPages = Math.max(1, Math.ceil(filteredPeriods.length / 3));
+  const visiblePeriods = useMemo(
+    () => filteredPeriods.slice(programPage * 3, programPage * 3 + 3),
+    [filteredPeriods, programPage],
+  );
+
+  useEffect(() => {
+    setProgramPage(0);
+  }, [selectedFilter]);
+
+  useEffect(() => {
+    if (programPage >= totalProgramPages) {
+      setProgramPage(Math.max(0, totalProgramPages - 1));
+    }
+  }, [programPage, totalProgramPages]);
 
   const [whatsappOpen, setWhatsappOpen] = useState(false);
 
@@ -304,8 +321,9 @@ export default function VisitorRegistrationCatalogPage() {
               </Link>
             </div>
           ) : (
-            <div className="program-cards-grid">
-              {filteredPeriods.map((period) => {
+            <>
+              <div className="program-cards-grid">
+              {visiblePeriods.map((period) => {
                 const parsed = parseNotes(period.notes);
                 const meta = getProgramMeta(period.program.programCode, period.program.programName);
                 const coverImage = parsed.thumbnailUrl || meta.defaultCover;
@@ -434,7 +452,31 @@ export default function VisitorRegistrationCatalogPage() {
                   </article>
                 );
               })}
-            </div>
+              </div>
+              {totalProgramPages > 1 && (
+                <div className="program-carousel-controls" aria-label="Navigasi pilihan program">
+                  <button
+                    type="button"
+                    className="program-carousel-button"
+                    disabled={programPage === 0}
+                    onClick={() => setProgramPage((page) => Math.max(0, page - 1))}
+                  >
+                    ← Sebelumnya
+                  </button>
+                  <span className="program-carousel-status">
+                    {programPage + 1} / {totalProgramPages}
+                  </span>
+                  <button
+                    type="button"
+                    className="program-carousel-button program-carousel-button-primary"
+                    disabled={programPage === totalProgramPages - 1}
+                    onClick={() => setProgramPage((page) => Math.min(totalProgramPages - 1, page + 1))}
+                  >
+                    Kartu selanjutnya →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>
