@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 type Program = { programName: string; programCode: string };
 type FormTemplate = { selectedFields?: string[] };
 type Period = { name: string; registrationFee: number; formTemplate?: FormTemplate | null };
-type Applicant = { registrationNo: string; submittedAt?: string | null; fullName?: string | null; program: Program; enrollmentPeriod: Period };
+type Applicant = { registrationNo?: string | null; submittedAt?: string | null; fullName?: string | null; program: Program; enrollmentPeriod: Period };
 
 type FieldGroup = { label: string; fields: Array<{ key: string; label: string }> };
 
@@ -178,7 +178,8 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
       const result = await res.json();
       if (!res.ok || !result.success) throw new Error(result.error?.message || 'Data gagal disimpan');
       const submittedAt = new Date().toISOString();
-      const submittedInfo = { registrationNo: item?.registrationNo, fullName: form.fullName || item?.fullName || null, program: item?.program, submittedAt };
+      const registrationNo = result.registrationNo || item?.registrationNo;
+      const submittedInfo = { registrationNo, fullName: form.fullName || item?.fullName || null, program: item?.program, submittedAt };
       window.localStorage.setItem(`mcore-registration-submitted:${token}`, 'true');
       window.localStorage.setItem(`mcore-registration-submitted:${token}:info`, JSON.stringify(submittedInfo));
       setSubmittedInfo(submittedInfo);

@@ -354,7 +354,7 @@ model RegistrationFormTemplate {
 // =============================================================================
 model Applicant {
   id                 String           @id @default(uuid()) @map("applicant_id")
-  registrationNo     String           @unique @map("registration_no") @db.VarChar(40)
+  registrationNo     String?          @unique @map("registration_no") @db.VarChar(40)
   publicToken        String           @unique @map("public_token") @db.VarChar(80)
   fullName           String?          @map("full_name") @db.VarChar(150)
   gender             Gender?

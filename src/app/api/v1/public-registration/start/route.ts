@@ -32,12 +32,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const registrationNo = `REG-${new Date().getFullYear()}-${randomBytes(4).toString('hex').toUpperCase()}`;
     const publicToken = randomBytes(30).toString('hex');
 
     const applicant = await prisma.applicant.create({
       data: {
-        registrationNo,
         publicToken,
         programId: period.programId,
         enrollmentPeriodId: period.id,
@@ -62,7 +60,7 @@ export async function POST(request: NextRequest) {
 
     try {
       await prisma.$queryRaw(
-        Prisma.sql`INSERT INTO "Shortlink" ("id","title","targetUrl","code","createdAt","updatedAt") VALUES (${randomBytes(12).toString('hex')},${registrationNo},${targetUrl},${shortCode},CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`
+        Prisma.sql`INSERT INTO "Shortlink" ("id","title","targetUrl","code","createdAt","updatedAt") VALUES (${randomBytes(12).toString('hex')},${`Pendaftaran ${period.program.programName}`},${targetUrl},${shortCode},CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)`
       );
     } catch (shortlinkErr) {
       console.warn('Failed to insert shortlink record:', shortlinkErr);
@@ -73,7 +71,6 @@ export async function POST(request: NextRequest) {
         success: true,
         data: {
           publicToken,
-          registrationNo,
           redirectUrl: `/register/${publicToken}`,
           shortlinkCode: shortCode,
           applicantId: applicant.id,
@@ -84,7 +81,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[POST /api/v1/public-registration/start]', error);
     return NextResponse.json(
-      { success: false, error: { message: 'Gagal memulai formulir pendaftaran' } },
+      {
+        success: false,
+        error: {
+          message: error instanceof Error ? error.message : 'Gagal memulai formulir pendaftaran',
+        },
+      },
       { status: 500 }
     );
   }

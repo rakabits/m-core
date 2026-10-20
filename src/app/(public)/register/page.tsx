@@ -128,15 +128,21 @@ export default function VisitorRegistrationCatalogPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enrollmentPeriodId: period.id }),
       });
-      const json = await res.json();
+      const raw = await res.text();
+      let json: { data?: { redirectUrl?: string; publicToken?: string }; error?: { message?: string } } = {};
+      try {
+        json = raw ? JSON.parse(raw) : {};
+      } catch {
+        throw new Error(`Respons server tidak valid (${res.status})`);
+      }
       if (!res.ok) {
-        throw new Error(json.error?.message || 'Gagal membuka form pendaftaran mandiri');
+        throw new Error(json.error?.message || `Gagal membuka form pendaftaran (${res.status})`);
       }
-      if (json.data?.redirectUrl) {
-        router.push(json.data.redirectUrl);
-      } else if (json.data?.publicToken) {
-        router.push(`/register/${json.data.publicToken}`);
+      const redirectUrl = json.data?.redirectUrl || (json.data?.publicToken ? `/register/${json.data.publicToken}` : '');
+      if (!redirectUrl) {
+        throw new Error('Link Form Pendaftaran tidak diterima dari server');
       }
+      window.location.assign(redirectUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kendala saat memulai pendaftaran');
       setStartingPeriodId(null);
