@@ -60,9 +60,13 @@ export default function ClassDetailPage() {
   }
 
   async function loadTeachers() {
-    const res = await fetch('/api/v1/users?role=TEACHER&isActive=true', { cache: 'no-store' });
-    const data = await res.json() as { success: boolean; data?: Teacher[] };
-    if (data.success) setTeachers(data.data ?? []);
+    const res = await fetch('/api/v1/teachers', { cache: 'no-store' });
+    const data = await res.json() as { success: boolean; data?: Array<{ id: string; displayName: string; employeeCode: string | null; isActive: boolean }> };
+    if (data.success) {
+      setTeachers((data.data ?? [])
+        .filter((item) => item.isActive)
+        .map((item) => ({ id: item.id, displayName: item.displayName, employeeCode: item.employeeCode })));
+    }
   }
 
   useEffect(() => {
@@ -100,7 +104,7 @@ export default function ClassDetailPage() {
     setStudentSearch(value);
     setSelectedStudent(null);
     if (value.trim().length < 2) { setStudentResults([]); return; }
-    const response = await fetch(`/api/v1/students/search?q=${encodeURIComponent(value)}`, { cache: 'no-store' });
+    const response = await fetch(`/api/v1/students/search?q=${encodeURIComponent(value)}&programId=${encodeURIComponent(detail?.program.id ?? '')}`, { cache: 'no-store' });
     const body = await response.json() as { success: boolean; data?: typeof studentResults };
     if (body.success) setStudentResults(body.data ?? []);
   }
@@ -131,10 +135,10 @@ export default function ClassDetailPage() {
     if (!promotion) return;
     setPromotionSaving(true); setError('');
     try {
-      const response = await fetch(`/api/v1/students/${promotion.studentId}/promote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromHistoryId: promotion.historyId, action: promotionAction, toClassId: promotionAction === 'promote' ? promotionClassId : undefined, endDate: promotionEndDate, notes: promotionNote || undefined }) });
+      const response = await fetch(`/api/v1/students/${promotion.studentId}/promote`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fromHistoryId: promotion.historyId, action: promotionAction === 'promote' ? 'correct-class' : promotionAction, toClassId: promotionAction === 'promote' ? promotionClassId : undefined, endDate: promotionEndDate, notes: promotionNote || undefined }) });
       const body = await response.json() as { success: boolean; error?: { message: string } };
       if (!response.ok || !body.success) throw new Error(body.error?.message ?? 'Gagal memproses aksi siswa.');
-      setPromotion(null); setPromotionClassId(''); setPromotionNote(''); setPromotionEndDate(new Date().toISOString().slice(0, 10)); setNotice(promotionAction === 'promote' ? 'Siswa berhasil dipromosikan.' : promotionAction === 'transfer' ? 'Siswa berhasil ditandai pindah.' : 'Siswa berhasil dikeluarkan.'); await loadDetail();
+      setPromotion(null); setPromotionClassId(''); setPromotionNote(''); setPromotionEndDate(new Date().toISOString().slice(0, 10)); setNotice(promotionAction === 'promote' ? 'Kelas siswa berhasil dikoreksi.' : promotionAction === 'transfer' ? 'Siswa berhasil ditandai pindah.' : 'Siswa berhasil dikeluarkan.'); await loadDetail();
     } catch (err) { setError(err instanceof Error ? err.message : 'Gagal memproses aksi siswa.'); } finally { setPromotionSaving(false); }
   }
 
@@ -281,12 +285,12 @@ export default function ClassDetailPage() {
                   <button type="button" className="roster-action" onClick={(event) => { event.preventDefault(); void openPromotion(en); }} aria-label={`Kelola ${en.student.fullName}`}>•••</button>
                 </Link>
               ))}
-            </div>
-          )}
-        </section>
-      </div>
+             </div>
+           )}
+         </section>
+       </div>
 
-      {promotion && <div className="enrollment-modal-backdrop" role="presentation" onClick={() => setPromotion(null)}><section className="enrollment-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><div className="enrollment-modal-header"><div><span className="section-kicker">STUDENT LIFECYCLE</span><h2>Kelola {promotion.name}</h2></div><button type="button" className="modal-close" onClick={() => setPromotion(null)}>×</button></div><p className="modal-description">Pilih tindakan dan tanggal efektif untuk enrollment siswa.</p><div className="promotion-tabs">{(['promote', 'transfer', 'drop'] as const).map((action) => <button type="button" className={promotionAction === action ? 'active' : ''} key={action} onClick={() => setPromotionAction(action)}>{action === 'promote' ? 'Naik kelas' : action === 'transfer' ? 'Pindah' : 'Keluarkan'}</button>)}</div>{promotionAction === 'promote' && <label className="promotion-field">Kelas tujuan<select value={promotionClassId} onChange={(event) => setPromotionClassId(event.target.value)}><option value="">Pilih kelas tujuan</option>{promotionClasses.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label>}<label className="promotion-field">Tanggal efektif<input type="date" value={promotionEndDate} onChange={(event) => setPromotionEndDate(event.target.value)} /></label><label className="promotion-field">Catatan<textarea value={promotionNote} onChange={(event) => setPromotionNote(event.target.value)} placeholder="Opsional" /></label>{promotionAction !== 'promote' && <div className={`lifecycle-warning ${promotionAction}`}><strong>{promotionAction === 'transfer' ? 'Siswa akan ditandai pindah.' : 'Siswa akan dikeluarkan dari kelas.'}</strong><span>Enrollment aktif akan ditutup dan tindakan ini tercatat pada histori siswa.</span></div>}<div className="modal-actions"><button type="button" className="detail-button" onClick={() => setPromotion(null)}>Batal</button><button type="button" className={`primary-button ${promotionAction === 'drop' ? 'danger-action' : ''}`} disabled={promotionSaving || !promotionEndDate || (promotionAction === 'promote' && !promotionClassId)} onClick={() => void submitPromotion()}>{promotionSaving ? 'Memproses...' : 'Simpan tindakan'}</button></div></section></div>}
+       {promotion && <div className="enrollment-modal-backdrop" role="presentation" onClick={() => setPromotion(null)}><section className="enrollment-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><div className="enrollment-modal-header"><div><span className="section-kicker">STUDENT LIFECYCLE</span><h2>Kelola {promotion.name}</h2></div><button type="button" className="modal-close" onClick={() => setPromotion(null)}>×</button></div><p className="modal-description">Edit kelas untuk memindahkan siswa ke kelas lain, atau kelola status enrollment siswa.</p><div className="promotion-tabs">{(['promote', 'transfer', 'drop'] as const).map((action) => <button type="button" className={promotionAction === action ? 'active' : ''} key={action} onClick={() => setPromotionAction(action)}>{action === 'promote' ? 'Edit Kelas' : action === 'transfer' ? 'Pindah' : 'Keluarkan'}</button>)}</div>{promotionAction === 'promote' && <label className="promotion-field">Kelas tujuan<select value={promotionClassId} onChange={(event) => setPromotionClassId(event.target.value)}><option value="">Pilih kelas tujuan</option>{promotionClasses.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label>}<label className="promotion-field">Tanggal efektif<input type="date" value={promotionEndDate} onChange={(event) => setPromotionEndDate(event.target.value)} /></label><label className="promotion-field">Catatan<textarea value={promotionNote} onChange={(event) => setPromotionNote(event.target.value)} placeholder="Opsional" /></label>{promotionAction !== 'promote' && <div className={`lifecycle-warning ${promotionAction}`}><strong>{promotionAction === 'transfer' ? 'Siswa akan ditandai pindah.' : 'Siswa akan dikeluarkan dari kelas.'}</strong><span>Enrollment aktif akan ditutup dan tindakan ini tercatat pada histori siswa.</span></div>}<div className="modal-actions"><button type="button" className="detail-button" onClick={() => setPromotion(null)}>Batal</button><button type="button" className={`primary-button ${promotionAction === 'drop' ? 'danger-action' : ''}`} disabled={promotionSaving || !promotionEndDate || (promotionAction === 'promote' && !promotionClassId)} onClick={() => void submitPromotion()}>{promotionSaving ? 'Memproses...' : 'Simpan tindakan'}</button></div></section></div>}
 
       {addStudentOpen && <div className="enrollment-modal-backdrop" role="presentation" onClick={() => setAddStudentOpen(false)}>
         <section className="enrollment-modal" role="dialog" aria-modal="true" aria-labelledby="add-student-title" onClick={(event) => event.stopPropagation()}>
