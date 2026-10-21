@@ -103,10 +103,17 @@ export default function ClassDetailPage() {
   async function searchStudents(value: string) {
     setStudentSearch(value);
     setSelectedStudent(null);
-    if (value.trim().length < 2) { setStudentResults([]); return; }
-    const response = await fetch(`/api/v1/students/search?q=${encodeURIComponent(value)}&programId=${encodeURIComponent(detail?.program.id ?? '')}`, { cache: 'no-store' });
-    const body = await response.json() as { success: boolean; data?: typeof studentResults };
-    if (body.success) setStudentResults(body.data ?? []);
+    if (value.trim().length < 2 && value.trim().length > 0) { setStudentResults([]); return; }
+    if (!detail?.program.id) { setStudentResults([]); return; }
+    try {
+      const response = await fetch(`/api/v1/students/search?q=${encodeURIComponent(value)}&programId=${encodeURIComponent(detail.program.id)}`, { cache: 'no-store' });
+      const body = await response.json() as { success: boolean; data?: typeof studentResults; error?: { message?: string } };
+      if (!response.ok || !body.success) throw new Error(body.error?.message ?? 'Gagal memuat daftar siswa.');
+      setStudentResults(body.data ?? []);
+    } catch (err) {
+      setStudentResults([]);
+      setEnrollmentError(err instanceof Error ? err.message : 'Gagal memuat daftar siswa.');
+    }
   }
 
   async function enrollSelectedStudent() {
@@ -144,27 +151,27 @@ export default function ClassDetailPage() {
 
   const filteredStudents = detail?.enrollments.filter((en) => search === '' || en.student.fullName.toLowerCase().includes(search.toLowerCase())) ?? [];
 
-  if (loading) return <main className="class-detail-page"><div className="class-empty"><span>⋯</span><strong>Memuat...</strong></div></main>;
-  if (!detail) return <main className="class-detail-page"><div className="class-empty"><span>⚠</span><strong>{error || 'Kelas tidak ditemukan.'}</strong><Link href="/academic/classes">← Kembali</Link></div></main>;
+  if (loading) return <main className="class-detail-page"><div className="class-empty"><span>â‹¯</span><strong>Memuat...</strong></div></main>;
+  if (!detail) return <main className="class-detail-page"><div className="class-empty"><span>âš </span><strong>{error || 'Kelas tidak ditemukan.'}</strong><Link href="/academic/classes">â† Kembali</Link></div></main>;
 
   const enrolledCount = detail.enrollments.length;
 
   return (
     <main className="class-detail-page">
-      {/* ── BREADCRUMB ── */}
+      {/* â”€â”€ BREADCRUMB â”€â”€ */}
       <nav className="class-breadcrumb" aria-label="Navigasi balik">
-        <Link href="/academic/classes">← Manajemen Kelas</Link>
+        <Link href="/academic/classes">â† Manajemen Kelas</Link>
         <span>/</span>
         <span>{detail.name}</span>
       </nav>
 
-      {/* ── HERO ── */}
+      {/* â”€â”€ HERO â”€â”€ */}
       <section className="class-detail-hero">
         <div className="detail-hero-left">
           <span className="class-code-badge">{detail.code}</span>
           <div>
             <h1>{detail.name}</h1>
-            <p>{detail.program.programName} · Tahun Akademik {detail.academicYear.code}</p>
+            <p>{detail.program.programName} Â· Tahun Akademik {detail.academicYear.code}</p>
           </div>
         </div>
         <div className="detail-hero-stats">
@@ -175,7 +182,7 @@ export default function ClassDetailPage() {
           </div>
           <div className="detail-stat">
             <span>WALI KELAS</span>
-            <strong>{detail.homeRoomTeacher ? detail.homeRoomTeacher.displayName : '—'}</strong>
+            <strong>{detail.homeRoomTeacher ? detail.homeRoomTeacher.displayName : 'â€”'}</strong>
           </div>
         </div>
       </section>
@@ -184,7 +191,7 @@ export default function ClassDetailPage() {
       {error && <div className="academic-notice error"><span>!</span>{error}</div>}
 
       <div className="class-detail-layout">
-        {/* ── PANEL KIRI: WALI KELAS ── */}
+        {/* â”€â”€ PANEL KIRI: WALI KELAS â”€â”€ */}
         <aside className="homeroom-panel">
           <div className="panel-heading">
             <div>
@@ -215,7 +222,7 @@ export default function ClassDetailPage() {
               value={selectedTeacher}
               onChange={(e) => setSelectedTeacher(e.target.value)}
             >
-              <option value="">— Tidak ada wali kelas —</option>
+              <option value="">â€” Tidak ada wali kelas â€”</option>
               {teachers.map((t) => (
                 <option key={t.id} value={t.id}>{t.displayName}</option>
               ))}
@@ -233,19 +240,19 @@ export default function ClassDetailPage() {
           <div className="class-quick-info">
             <div className="info-row"><span>Program</span><strong>{detail.program.programName}</strong></div>
             <div className="info-row"><span>Kode Kelas</span><strong>{detail.code}</strong></div>
-            <div className="info-row"><span>Kapasitas</span><strong>{detail.capacity ?? '—'}</strong></div>
+            <div className="info-row"><span>Kapasitas</span><strong>{detail.capacity ?? 'â€”'}</strong></div>
             <div className="info-row"><span>Tahun Akademik</span><strong>{detail.academicYear.code}</strong></div>
           </div>
         </aside>
 
-        {/* ── PANEL KANAN: DAFTAR SISWA ── */}
+        {/* â”€â”€ PANEL KANAN: DAFTAR SISWA â”€â”€ */}
         <section className="student-panel">
           <div className="panel-heading">
             <div>
               <span className="section-kicker">DAFTAR SISWA</span>
-              <h2>Siswa Terdaftar <em>·</em> {enrolledCount} orang</h2>
+              <h2>Siswa Terdaftar <em>Â·</em> {enrolledCount} orang</h2>
             </div>
-            <button type="button" className="primary-button" onClick={() => { setAddStudentOpen(true); setEnrollmentError(''); setEnrollmentNotice(''); }}>
+            <button type="button" className="primary-button" onClick={() => { setAddStudentOpen(true); setEnrollmentError(''); setEnrollmentNotice(''); setStudentSearch(''); setSelectedStudent(null); void searchStudents(''); }}>
               + Tambah Siswa
             </button>
           </div>
@@ -282,7 +289,7 @@ export default function ClassDetailPage() {
                   <span className={`gender-badge ${en.student.gender}`}>{genderLabel[en.student.gender]}</span>
                   <span className={`status-badge ${en.student.status}`}>{en.student.status}</span>
                   <span className="enrolled-date">{new Date(en.assignedAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                  <button type="button" className="roster-action" onClick={(event) => { event.preventDefault(); void openPromotion(en); }} aria-label={`Kelola ${en.student.fullName}`}>•••</button>
+                  <button type="button" className="roster-action" onClick={(event) => { event.preventDefault(); void openPromotion(en); }} aria-label={`Kelola ${en.student.fullName}`}>â€¢â€¢â€¢</button>
                 </Link>
               ))}
              </div>
@@ -290,18 +297,19 @@ export default function ClassDetailPage() {
          </section>
        </div>
 
-       {promotion && <div className="enrollment-modal-backdrop" role="presentation" onClick={() => setPromotion(null)}><section className="enrollment-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><div className="enrollment-modal-header"><div><span className="section-kicker">STUDENT LIFECYCLE</span><h2>Kelola {promotion.name}</h2></div><button type="button" className="modal-close" onClick={() => setPromotion(null)}>×</button></div><p className="modal-description">Edit kelas untuk memindahkan siswa ke kelas lain, atau kelola status enrollment siswa.</p><div className="promotion-tabs">{(['promote', 'transfer', 'drop'] as const).map((action) => <button type="button" className={promotionAction === action ? 'active' : ''} key={action} onClick={() => setPromotionAction(action)}>{action === 'promote' ? 'Edit Kelas' : action === 'transfer' ? 'Pindah' : 'Keluarkan'}</button>)}</div>{promotionAction === 'promote' && <label className="promotion-field">Kelas tujuan<select value={promotionClassId} onChange={(event) => setPromotionClassId(event.target.value)}><option value="">Pilih kelas tujuan</option>{promotionClasses.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label>}<label className="promotion-field">Tanggal efektif<input type="date" value={promotionEndDate} onChange={(event) => setPromotionEndDate(event.target.value)} /></label><label className="promotion-field">Catatan<textarea value={promotionNote} onChange={(event) => setPromotionNote(event.target.value)} placeholder="Opsional" /></label>{promotionAction !== 'promote' && <div className={`lifecycle-warning ${promotionAction}`}><strong>{promotionAction === 'transfer' ? 'Siswa akan ditandai pindah.' : 'Siswa akan dikeluarkan dari kelas.'}</strong><span>Enrollment aktif akan ditutup dan tindakan ini tercatat pada histori siswa.</span></div>}<div className="modal-actions"><button type="button" className="detail-button" onClick={() => setPromotion(null)}>Batal</button><button type="button" className={`primary-button ${promotionAction === 'drop' ? 'danger-action' : ''}`} disabled={promotionSaving || !promotionEndDate || (promotionAction === 'promote' && !promotionClassId)} onClick={() => void submitPromotion()}>{promotionSaving ? 'Memproses...' : 'Simpan tindakan'}</button></div></section></div>}
+       {promotion && <div className="enrollment-modal-backdrop" role="presentation" onClick={() => setPromotion(null)}><section className="enrollment-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}><div className="enrollment-modal-header"><div><span className="section-kicker">STUDENT LIFECYCLE</span><h2>Kelola {promotion.name}</h2></div><button type="button" className="modal-close" onClick={() => setPromotion(null)}>Ã—</button></div><p className="modal-description">Edit kelas untuk memindahkan siswa ke kelas lain, atau kelola status enrollment siswa.</p><div className="promotion-tabs">{(['promote', 'transfer', 'drop'] as const).map((action) => <button type="button" className={promotionAction === action ? 'active' : ''} key={action} onClick={() => setPromotionAction(action)}>{action === 'promote' ? 'Edit Kelas' : action === 'transfer' ? 'Pindah' : 'Keluarkan'}</button>)}</div>{promotionAction === 'promote' && <label className="promotion-field">Kelas tujuan<select value={promotionClassId} onChange={(event) => setPromotionClassId(event.target.value)}><option value="">Pilih kelas tujuan</option>{promotionClasses.map((item) => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select></label>}<label className="promotion-field">Tanggal efektif<input type="date" value={promotionEndDate} onChange={(event) => setPromotionEndDate(event.target.value)} /></label><label className="promotion-field">Catatan<textarea value={promotionNote} onChange={(event) => setPromotionNote(event.target.value)} placeholder="Opsional" /></label>{promotionAction !== 'promote' && <div className={`lifecycle-warning ${promotionAction}`}><strong>{promotionAction === 'transfer' ? 'Siswa akan ditandai pindah.' : 'Siswa akan dikeluarkan dari kelas.'}</strong><span>Enrollment aktif akan ditutup dan tindakan ini tercatat pada histori siswa.</span></div>}<div className="modal-actions"><button type="button" className="detail-button" onClick={() => setPromotion(null)}>Batal</button><button type="button" className={`primary-button ${promotionAction === 'drop' ? 'danger-action' : ''}`} disabled={promotionSaving || !promotionEndDate || (promotionAction === 'promote' && !promotionClassId)} onClick={() => void submitPromotion()}>{promotionSaving ? 'Memproses...' : 'Simpan tindakan'}</button></div></section></div>}
 
       {addStudentOpen && <div className="enrollment-modal-backdrop" role="presentation" onClick={() => setAddStudentOpen(false)}>
         <section className="enrollment-modal" role="dialog" aria-modal="true" aria-labelledby="add-student-title" onClick={(event) => event.stopPropagation()}>
-          <div className="enrollment-modal-header"><div><span className="section-kicker">ENROLLMENT</span><h2 id="add-student-title">Tambah Siswa ke Kelas</h2></div><button type="button" className="modal-close" onClick={() => setAddStudentOpen(false)} aria-label="Tutup">×</button></div>
+          <div className="enrollment-modal-header"><div><span className="section-kicker">ENROLLMENT</span><h2 id="add-student-title">Tambah Siswa ke Kelas</h2></div><button type="button" className="modal-close" onClick={() => setAddStudentOpen(false)} aria-label="Tutup">Ã—</button></div>
           <p className="modal-description">Cari siswa dari Master Student berdasarkan nama, NIK, atau nomor siswa.</p>
           <input autoFocus className="class-search" type="search" placeholder="Ketik minimal 2 karakter..." value={studentSearch} onChange={(event) => void searchStudents(event.target.value)} />
           {enrollmentError && <div className="academic-notice error"><span>!</span>{enrollmentError}</div>}
-          <div className="student-picker-results">{studentResults.length === 0 && studentSearch.length >= 2 ? <p className="picker-empty">Siswa tidak ditemukan.</p> : studentResults.map((student) => <button type="button" key={student.id} className={`student-picker-option ${selectedStudent === student.id ? 'selected' : ''}`} onClick={() => setSelectedStudent(student.id)}><span className="picker-avatar">{student.fullName.slice(0, 1).toUpperCase()}</span><span><strong>{student.fullName}</strong><small>No. {student.studentNumber}{student.email ? ` · ${student.email}` : ''}</small></span><span className="picker-check">{selectedStudent === student.id ? '✓' : ''}</span></button>)}</div>
+           <div className="student-picker-table-wrap"><table className="student-picker-table"><thead><tr><th>Nama Siswa</th><th>No. Siswa</th><th>Program</th><th>Pilih</th></tr></thead><tbody>{studentResults.length === 0 ? <tr><td colSpan={4} className="picker-empty">{enrollmentError || 'Tidak ada siswa dari program ini.'}</td></tr> : studentResults.map((student) => <tr key={student.id} className={selectedStudent === student.id ? 'selected' : ''} onClick={() => setSelectedStudent(student.id)}><td><strong>{student.fullName}</strong></td><td>{student.studentNumber}</td><td>{detail.program.programName}</td><td><button type="button" className="picker-select-button" onClick={(event) => { event.stopPropagation(); setSelectedStudent(student.id); }}>{selectedStudent === student.id ? '✓ Dipilih' : 'Pilih'}</button></td></tr>)}</tbody></table></div>
           <div className="modal-actions"><button type="button" className="detail-button" onClick={() => setAddStudentOpen(false)}>Batal</button><button type="button" className="primary-button" disabled={!selectedStudent || enrolling} onClick={() => void enrollSelectedStudent()}>{enrolling ? 'Menambahkan...' : 'Tambahkan ke Kelas'}</button></div>
         </section>
       </div>}
     </main>
   );
 }
+

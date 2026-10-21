@@ -56,9 +56,11 @@ export async function createStudent(input: StudentCreateInput, actorId?: string)
 }
 
 export async function getStudent(id: string, sensitive = false) {
-  const student = await prisma.student.findUnique({ where: { id }, select: { ...baseSelect, programHistories: { where: { status: 'enrolled' }, include: { program: { select: { id: true, programName: true } } }, orderBy: { createdAt: 'desc' }, take: 1 } } });
+  const student = await prisma.student.findUnique({ where: { id }, select: { ...baseSelect, programHistories: { include: { program: { select: { id: true, programName: true, programCode: true, academicLevel: true } }, classEnrollment: { include: { class: { include: { homeRoomTeacher: { select: { id: true, displayName: true } } } } } } }, orderBy: { createdAt: 'desc' } } } });
   if (!student) return null;
-  return { ...presentStudent(student, sensitive), parents: student.parents, guardian: student.guardianConfig, active_program: student.programHistories[0] ? { program_id: student.programHistories[0].program.id, program_name: student.programHistories[0].program.programName, academic_year: student.programHistories[0].academicYear, class_name: student.programHistories[0].className } : null };
+  const histories = student.programHistories.map((history: any) => ({ id: history.id, academicYear: history.academicYear, level: history.level, className: history.className, status: history.status, program: history.program, class: history.classEnrollment?.class ? { id: history.classEnrollment.class.id, name: history.classEnrollment.class.name, code: history.classEnrollment.class.code, homeRoomTeacher: history.classEnrollment.class.homeRoomTeacher } : null }));
+  const activeHistory = histories.find((history: any) => history.status === 'enrolled') ?? histories[0];
+  return { ...presentStudent({ ...student, programHistories: activeHistory ? [activeHistory] : [] }, sensitive), parents: student.parents, guardian: student.guardianConfig, active_program: activeHistory ? { program_id: activeHistory.program.id, program_name: activeHistory.program.programName, academic_year: activeHistory.academicYear, class_name: activeHistory.class?.name ?? activeHistory.className } : null, program_histories: histories };
 }
 
 const allowedTransitions: Record<StudentStatus, StudentStatus[]> = { active: ['inactive', 'alumni'], inactive: ['active'], alumni: [] };
