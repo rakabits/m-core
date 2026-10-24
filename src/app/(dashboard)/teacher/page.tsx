@@ -508,39 +508,36 @@ export default function MasterTeacherPage() {
   const inactiveCount = teachers.length - activeCount;
 
   return (
-    <main className="students-page teacher-page">
-      <header className="students-header directory-header teacher-header">
-        <div>
-          <p className="eyebrow">M-CORE / MANAGEMENT</p>
+    <main className="class-mgmt-page teacher-page">
+      <section className="class-hero teacher-hero">
+        <div className="class-hero-copy">
+          <span className="eyebrow"><i />M-CORE / MANAGEMENT</span>
           <h1>Master Teacher</h1>
-          <p className="subtitle">Kelola direktori guru, data profil, kepegawaian, dan dokumen pengajar.</p>
+          <p>Kelola direktori guru, data profil, kepegawaian, dan dokumen pengajar.</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <button className="detail-button" type="button" onClick={exportTeachers} disabled={exporting}>{exporting ? 'Menyiapkan...' : 'Export Excel (.xlsx)'}</button>`n          <button className="detail-button" type="button" onClick={() => setBulkUploadOpen(true)}>Upload Massal (.xlsx)</button>`n          <button className="detail-button" type="button" onClick={() => { setRegistrationNik(''); setRegistrationError(''); setRegistrationLink(''); setRegistrationOpen(true); }}>
+        <div className="teacher-hero-actions" aria-label="Aksi Master Teacher">
+          <button type="button" onClick={exportTeachers} disabled={exporting}>
+            {exporting ? 'Menyiapkan...' : 'Export Excel (.xlsx)'}
+          </button>
+          <button type="button" onClick={() => setBulkUploadOpen(true)}>
+            Upload Massal (.xlsx)
+          </button>
+          <button type="button" onClick={() => { setRegistrationNik(''); setRegistrationError(''); setRegistrationLink(''); setRegistrationOpen(true); }}>
             Generate Link Guru
           </button>
-          <button
-            className="primary-button"
-            type="button"
-            onClick={() => {
-              setForm(empty);
-              setStep(0);
-              setError('');
-              setOpen(true);
-            }}
-          >
+          <button className="is-primary" type="button" onClick={() => { setForm(empty); setStep(0); setError(''); setOpen(true); }}>
             + Guru baru
           </button>
         </div>
-      </header>
+      </section>
 
       {error && <div className="state error">{error}</div>}
 
-      {/* â”€â”€ STATS CARDS â”€â”€ */}
+      {/* STATS CARDS */}
       <section className="teacher-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '20px' }}>
         <article className="teacher-stat-card" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px', borderRadius: '16px', background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(15,23,42,0.04)' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#e6fffa', color: '#0ea5a4', display: 'grid', placeItems: 'center', fontSize: '22px', fontWeight: '800' }}>
-            ðŸ‘¥
+            &#128101;
           </div>
           <div>
             <small style={{ color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Teacher</small>
@@ -551,7 +548,7 @@ export default function MasterTeacherPage() {
 
         <article className="teacher-stat-card" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px', borderRadius: '16px', background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(15,23,42,0.04)' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#ecfdf5', color: '#10b981', display: 'grid', placeItems: 'center', fontSize: '22px', fontWeight: '800' }}>
-            âœ“
+            ✓
           </div>
           <div>
             <small style={{ color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Guru Aktif</small>
@@ -562,7 +559,7 @@ export default function MasterTeacherPage() {
 
         <article className="teacher-stat-card" style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '18px 20px', borderRadius: '16px', background: '#fff', border: '1px solid #e2e8f0', boxShadow: '0 4px 12px rgba(15,23,42,0.04)' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#f8fafc', color: '#94a3b8', display: 'grid', placeItems: 'center', fontSize: '22px', fontWeight: '800' }}>
-            â¸
+            ⏸
           </div>
           <div>
             <small style={{ color: '#64748b', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nonaktif / Cuti</small>
@@ -572,7 +569,7 @@ export default function MasterTeacherPage() {
         </article>
       </section>
 
-      {/* â”€â”€ TOOLBAR: SEARCH & FILTER â”€â”€ */}
+      {/* TOOLBAR: SEARCH & FILTER */}
       <section className="teacher-toolbar" style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
         <div style={{ display: 'flex', gap: '8px', background: '#fff', padding: '4px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
           {(['ALL', 'ACTIVE', 'INACTIVE'] as const).map((st) => (
@@ -613,7 +610,7 @@ export default function MasterTeacherPage() {
             }}
           />
           <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8', fontSize: '14px' }}>
-            âŒ•
+            ⌕
           </span>
         </div>
       </section>
@@ -632,13 +629,13 @@ export default function MasterTeacherPage() {
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}>
-            <span style={{ display: 'block', fontSize: '32px', marginBottom: '12px' }}>â³</span>
+            <span style={{ display: 'block', fontSize: '32px', marginBottom: '12px' }}>Memuat</span>
             <strong style={{ fontSize: '15px' }}>Memuat direktori guru...</strong>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '60px 20px', background: '#f8fafc', borderRadius: '14px', border: '1px dashed #cbd5e1', margin: '10px 0' }}>
             <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: '#ecfdf5', color: '#0ea5a4', display: 'grid', placeItems: 'center', fontSize: '28px', margin: '0 auto 16px auto' }}>
-              ðŸ‘¨â€ðŸ«
+              Guru
             </div>
             <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#0f172a', margin: '0 0 6px 0' }}>
               {search ? 'Tidak ada guru yang cocok' : 'Belum Ada Data Guru'}
@@ -743,8 +740,8 @@ export default function MasterTeacherPage() {
         const Section = ({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) => (
           <section style={{ border: '1px solid #e2e8f0', borderRadius: '16px', padding: '18px', background: '#fff', boxShadow: '0 6px 18px rgba(15,23,42,0.04)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ width: '32px', height: '32px', display: 'grid', placeItems: 'center', borderRadius: '10px', background: '#ecfdf5', fontSize: '16px' }}>{icon}</span>
-              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '14px', fontWeight: '850' }}>{title}</h3>
+              <span aria-hidden="true" style={{ width: '32px', height: '32px', flexShrink: 0, display: 'grid', placeItems: 'center', borderRadius: '10px', background: '#ecfdf5', color: '#0f766e', fontSize: '13px', fontWeight: '850', letterSpacing: '0.02em' }}>{icon}</span>
+              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '14px', fontWeight: '850', lineHeight: 1.3 }}>{title}</h3>
             </div>
             {children}
           </section>
@@ -762,37 +759,37 @@ export default function MasterTeacherPage() {
                       <span style={{ fontSize: '12px', opacity: 0.82 }}>{String(selectedTeacher.employeeCode ?? 'Kode belum diisi')}</span>
                     </div>
                   </div>
-                  <button type="button" aria-label="Tutup detail teacher" onClick={() => setDetailOpen(false)} style={{ flexShrink: 0, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', fontWeight: '750' }}>âœ•</button>
+                  <button type="button" aria-label="Tutup detail teacher" onClick={() => setDetailOpen(false)} style={{ flexShrink: 0, border: '1px solid rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.12)', color: '#fff', borderRadius: '10px', padding: '8px 12px', cursor: 'pointer', fontWeight: '750' }}>✕</button>
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '18px' }}>
-                  <span style={{ padding: '6px 10px', borderRadius: '999px', background: selectedTeacher.isActive ? '#d1fae5' : '#e2e8f0', color: selectedTeacher.isActive ? '#047857' : '#475569', fontSize: '11px', fontWeight: '800' }}>{selectedTeacher.isActive ? 'â— Aktif' : 'â— Nonaktif'}</span>
-                  <span style={{ padding: '6px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.14)', fontSize: '11px' }}>ID: {String(selectedTeacher.id).slice(0, 12)}â€¦</span>
+                  <span style={{ padding: '6px 10px', borderRadius: '999px', background: selectedTeacher.isActive ? '#d1fae5' : '#e2e8f0', color: selectedTeacher.isActive ? '#047857' : '#475569', fontSize: '11px', fontWeight: '800' }}>{selectedTeacher.isActive ? '• Aktif' : '• Nonaktif'}</span>
+                  <span style={{ padding: '6px 10px', borderRadius: '999px', background: 'rgba(255,255,255,0.14)', fontSize: '11px' }}>ID: {String(selectedTeacher.id).slice(0, 12)}…</span>
                 </div>
               </header>
               <div style={{ display: 'grid', gap: '14px', padding: '20px 28px 28px' }}>
-                <Section icon="ðŸ‘¤" title="A. Profil Guru">
+                <Section icon="P" title="A. Profil Guru">
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}>
                     <Field label="Kode Guru" text={String(selectedTeacher.employeeCode ?? '-')} /><Field label="Nama Lengkap" text={String(selectedTeacher.displayName ?? '-')} /><Field label="Jenis Kelamin" text={value(profile, 'gender')} /><Field label="Tempat Lahir" text={value(profile, 'birthPlace')} /><Field label="Tanggal Lahir" text={value(profile, 'birthDate')} /><Field label="NIK" text={value(profile, 'nik')} /><Field label="Nomor KK" text={value(profile, 'familyCardNumber')} /><Field label="Email" text={value(profile, 'email')} /><Field label="Nomor HP" text={value(profile, 'phone')} /><Field label="WhatsApp" text={value(profile, 'whatsapp')} /><Field label="Status Pernikahan" text={value(profile, 'maritalStatus')} /><Field label="Jumlah Anak" text={value(profile, 'childrenCount', '0')} /><Field label="Status Guru" text={selectedTeacher.isActive ? 'Aktif' : 'Nonaktif'} />
                   </div>
                 </Section>
-                <Section icon="ðŸ“" title="B. Alamat">
+                <Section icon="A" title="B. Alamat">
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}><Field label="Alamat" text={value(address, 'address')} /><Field label="Desa / Kelurahan" text={value(address, 'village')} /><Field label="RT" text={value(address, 'rt')} /><Field label="RW" text={value(address, 'rw')} /><Field label="Kecamatan" text={value(address, 'district')} /><Field label="Kota" text={value(address, 'city')} /><Field label="Provinsi" text={value(address, 'province')} /><Field label="Kode Pos" text={value(address, 'postalCode')} /></div>
                 </Section>
-                <Section icon="ðŸ’¼" title="C. Kepegawaian">
+                <Section icon="K" title="C. Kepegawaian">
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px', marginBottom: assignments.length ? '16px' : 0 }}><Field label="Status Kepegawaian" text={value(employment, 'employmentStatus')} /><Field label="Tanggal Mulai Bekerja" text={value(employment, 'employmentStartedAt')} /></div>
                   {assignments.length ? <div style={{ display: 'grid', gap: '10px' }}>{assignments.map((item, index) => <div key={String(item.id ?? index)} style={{ padding: '13px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}><strong style={{ display: 'block', color: '#0f766e', fontSize: '12px', marginBottom: '10px' }}>Unit/Jabatan #{index + 1}</strong><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}><Field label="Unit / Departemen" text={value(item, 'unit')} /><Field label="Jabatan" text={value(item, 'position')} /><Field label="Mulai Jabatan" text={value(item, 'startedAt').slice(0, 10)} /><Field label="Selesai Jabatan" text={value(item, 'endedAt').slice(0, 10)} /><Field label="Catatan" text={value(item, 'notes')} /></div></div>)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada unit atau jabatan.</span>}
                 </Section>
-                <Section icon="ðŸŽ“" title="D. Riwayat Pendidikan">
-                  {educations.length ? <div style={{ display: 'grid', gap: '10px' }}>{educations.map((item, index) => <div key={String(item.id ?? index)} style={{ padding: '13px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}><strong style={{ display: 'block', color: '#0f766e', fontSize: '12px', marginBottom: '10px' }}>{value(item, 'level', 'Pendidikan')} Â· {value(item, 'institutionName')}</strong><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}><Field label="Nama Institusi" text={value(item, 'institutionName')} /><Field label="Program Studi" text={value(item, 'studyProgram')} /><Field label="Kota / Daerah" text={value(item, 'city')} /><Field label="Tahun Masuk" text={value(item, 'startedYear')} /><Field label="Tahun Lulus" text={value(item, 'graduatedYear')} /><Field label="Status Pendidikan" text={value(item, 'status')} /><Field label="Catatan" text={value(item, 'notes')} /></div></div>)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada riwayat pendidikan.</span>}
+                <Section icon="P" title="D. Riwayat Pendidikan">
+                  {educations.length ? <div style={{ display: 'grid', gap: '10px' }}>{educations.map((item, index) => <div key={String(item.id ?? index)} style={{ padding: '13px', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}><strong style={{ display: 'block', color: '#0f766e', fontSize: '12px', marginBottom: '10px' }}>{value(item, 'level', 'Pendidikan')} · {value(item, 'institutionName')}</strong><div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}><Field label="Nama Institusi" text={value(item, 'institutionName')} /><Field label="Program Studi" text={value(item, 'studyProgram')} /><Field label="Kota / Daerah" text={value(item, 'city')} /><Field label="Tahun Masuk" text={value(item, 'startedYear')} /><Field label="Tahun Lulus" text={value(item, 'graduatedYear')} /><Field label="Status Pendidikan" text={value(item, 'status')} /><Field label="Catatan" text={value(item, 'notes')} /></div></div>)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada riwayat pendidikan.</span>}
                 </Section>
-                <Section icon="ðŸ’" title="E. Data Pasangan">
+                <Section icon="P" title="E. Data Pasangan">
                   {Array.isArray(selectedTeacher.spouseLinks) && selectedTeacher.spouseLinks.length ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}>{(() => { const spouse = (selectedTeacher.spouseLinks as Array<Record<string, unknown>>)[0]; const partner = (spouse.partnerTeacher ?? {}) as Record<string, unknown>; return <><Field label="Hubungan" text={value(spouse, 'relationship')} /><Field label="Guru/Staff Mumtaza" text={spouse.isMumtazaStaff ? 'Ya' : 'Tidak'} /><Field label="Nama Pasangan" text={value(spouse, 'manualName', value(partner, 'displayName'))} /><Field label="Kode Pasangan" text={value(partner, 'employeeCode')} /></>; })()}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada data pasangan.</span>}
                 </Section>
-                <Section icon="ðŸ‘ª" title="F. Data Keluarga">
+                <Section icon="K" title="F. Data Keluarga">
                   {Array.isArray(selectedTeacher.familyMembers) && selectedTeacher.familyMembers.length ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px' }}>{(selectedTeacher.familyMembers as Array<Record<string, unknown>>).map((item, index) => <Field key={String(item.id ?? index)} label={value(item, 'relation')} text={value(item, 'fullName')} />)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada data keluarga.</span>}
                 </Section>
-                <Section icon="ðŸ“„" title="G. Dokumen">
-                  {documents.length ? <div style={{ display: 'grid', gap: '8px' }}>{documents.map((doc, index) => <a key={String(doc.id ?? index)} href={String(doc.fileUrl ?? '#')} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', borderRadius: '11px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0369a1', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }}><span style={{ overflowWrap: 'anywhere' }}>ðŸ“Ž {String(doc.title ?? 'Dokumen')}</span><span>{String(doc.type ?? 'OTHER')} â†—</span></a>)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada dokumen.</span>}
+                <Section icon="D" title="G. Dokumen">
+                  {documents.length ? <div style={{ display: 'grid', gap: '8px' }}>{documents.map((doc, index) => <a key={String(doc.id ?? index)} href={String(doc.fileUrl ?? '#')} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', padding: '12px 14px', borderRadius: '11px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0369a1', textDecoration: 'none', fontSize: '12px', fontWeight: '700' }}><span style={{ overflowWrap: 'anywhere' }}>Lampiran {String(doc.title ?? 'Dokumen')}</span><span>{String(doc.type ?? 'OTHER')} ↑</span></a>)}</div> : <span style={{ color: '#64748b', fontSize: '13px' }}>Belum ada dokumen.</span>}
                 </Section>
               </div>
             </section>
@@ -800,7 +797,9 @@ export default function MasterTeacherPage() {
         );
       })()}
 
-      <TeacherBulkUploadModal open={bulkUploadOpen} onClose={() => setBulkUploadOpen(false)} onDone={load} />`n`n      {open && (
+      <TeacherBulkUploadModal open={bulkUploadOpen} onClose={() => setBulkUploadOpen(false)} onDone={load} />
+
+      {open && (
         <div className="teacher-modal" role="presentation" style={{ overflowY: 'auto', padding: '20px' }}>
           <form
             className="teacher-dialog teacher-form"
@@ -817,7 +816,7 @@ export default function MasterTeacherPage() {
             }}
           >
             <button type="button" className="teacher-close" onClick={() => setOpen(false)}>
-              Ã—
+              ×
             </button>
             <div style={{ flexShrink: 0 }}>
               <p className="eyebrow">FORM MASTER TEACHER</p>
@@ -862,9 +861,9 @@ export default function MasterTeacherPage() {
 
             {stepWarning && (
               <div role="alert" style={{ position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)', zIndex: 100, width: 'min(92vw, 520px)', display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '14px 16px', borderRadius: '14px', background: '#fff7ed', border: '1px solid #fdba74', color: '#9a3412', boxShadow: '0 16px 40px rgba(154,52,18,0.2)', animation: 'teacher-warning-in 180ms ease-out' }}>
-                <span style={{ fontSize: '20px', lineHeight: 1 }}>âš ï¸</span>
+                <span style={{ fontSize: '20px', lineHeight: 1 }}>⚠️</span>
                 <div style={{ flex: 1 }}><strong style={{ display: 'block', fontSize: '13px', marginBottom: '3px' }}>Data belum lengkap</strong><span style={{ fontSize: '12px' }}>{stepWarning}</span></div>
-                <button type="button" aria-label="Tutup peringatan" onClick={() => setStepWarning('')} style={{ border: 'none', background: 'transparent', color: '#9a3412', fontSize: '18px', cursor: 'pointer', padding: 0 }}>âœ•</button>
+                <button type="button" aria-label="Tutup peringatan" onClick={() => setStepWarning('')} style={{ border: 'none', background: 'transparent', color: '#9a3412', fontSize: '18px', cursor: 'pointer', padding: 0 }}>✕</button>
               </div>
             )}
             <div
@@ -1063,7 +1062,7 @@ export default function MasterTeacherPage() {
                                     cursor: 'pointer'
                                   }}
                                 >
-                                  âœ• Hapus
+                                  ✕ Hapus
                                 </button>
                               )}
                             </div>
@@ -1121,7 +1120,7 @@ export default function MasterTeacherPage() {
                                 />
                                 {item.documentFileName && (
                                   <small style={{ fontSize: '11px', color: '#0ea5a4', display: 'block', marginTop: '4px' }}>
-                                    âœ“ File terpilih: {item.documentFileName}
+                                    ✓ File terpilih: {item.documentFileName}
                                   </small>
                                 )}
                               </label>
@@ -1249,7 +1248,7 @@ export default function MasterTeacherPage() {
                                   cursor: 'pointer'
                                 }}
                               >
-                                âœ• Hapus
+                                ✕ Hapus
                               </button>
                             )}
                           </div>
@@ -1348,7 +1347,7 @@ export default function MasterTeacherPage() {
                               />
                               {edu.certificateFileName && (
                                 <small style={{ fontSize: '11px', color: '#0ea5a4', display: 'block', marginTop: '4px' }}>
-                                  âœ“ File terpilih: {edu.certificateFileName}
+                                  ✓ File terpilih: {edu.certificateFileName}
                                 </small>
                               )}
                             </label>
@@ -1535,9 +1534,9 @@ export default function MasterTeacherPage() {
           <section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="teacher-registration-link-title">
             <div className="modal-header">
               <div><span className="eyebrow">TEACHER REGISTRATION</span><h2 id="teacher-registration-link-title">Generate Link Guru</h2></div>
-              <button className="modal-close" type="button" onClick={() => setRegistrationOpen(false)} aria-label="Tutup">Ã—</button>
+              <button className="modal-close" type="button" onClick={() => setRegistrationOpen(false)} aria-label="Tutup">×</button>
             </div>
-            {registrationLink ? <div className="state" role="status"><p>Link pendaftaran guru berhasil dibuat.</p><strong>{registrationLink}</strong><button className="primary-button" type="button" onClick={() => void navigator.clipboard?.writeText(registrationLink)}>Salin link</button></div> : <form onSubmit={generateTeacherRegistrationLink} className="form-grid"><label>NIK guru baru<input id="teacher-registration-nik" inputMode="numeric" maxLength={16} value={registrationNik} onChange={(event) => setRegistrationNik(event.target.value.replace(/\D/g, ''))} placeholder="16 digit NIK" required /></label><p className="subtitle">NIK wajib diisi dan akan diperiksa agar tidak terjadi duplikasi.</p>{registrationError && <p className="form-error">{registrationError}</p>}<button className="primary-button" type="submit" disabled={registrationSaving}>{registrationSaving ? 'Membuat linkâ€¦' : 'Generate Registration Link'}</button></form>}
+            {registrationLink ? <div className="state" role="status"><p>Link pendaftaran guru berhasil dibuat.</p><strong>{registrationLink}</strong><button className="primary-button" type="button" onClick={() => void navigator.clipboard?.writeText(registrationLink)}>Salin link</button></div> : <form onSubmit={generateTeacherRegistrationLink} className="form-grid"><label>NIK guru baru<input id="teacher-registration-nik" inputMode="numeric" maxLength={16} value={registrationNik} onChange={(event) => setRegistrationNik(event.target.value.replace(/\D/g, ''))} placeholder="16 digit NIK" required /></label><p className="subtitle">NIK wajib diisi dan akan diperiksa agar tidak terjadi duplikasi.</p>{registrationError && <p className="form-error">{registrationError}</p>}<button className="primary-button" type="submit" disabled={registrationSaving}>{registrationSaving ? 'Membuat link…' : 'Generate Registration Link'}</button></form>}
           </section>
         </div>
       )}
