@@ -14,17 +14,29 @@ interface StudentBulkUploadModalProps {
   onSuccess: () => void;
 }
 
+interface ImportChange {
+  field: string;
+  label: string;
+  before: string | null;
+  after: string | null;
+}
+
 interface ImportReport {
+  mode?: 'preview' | 'commit';
   total: number;
-  imported: number;
+  imported?: number;
+  created?: number;
+  updated?: number;
   failed: number;
+  hasChanges?: boolean;
   results: Array<{
     row: number;
     fullName: string;
-    status: 'success' | 'failed';
+    status: 'success' | 'created' | 'updated' | 'update' | 'create' | 'unchanged' | 'failed';
     error?: string;
     studentId?: string;
     studentNumber?: string;
+    changes?: ImportChange[];
   }>;
 }
 
@@ -104,35 +116,43 @@ export default function StudentBulkUploadModal({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleStartImport = async () => {
+  const sendImport = async (mode: 'preview' | 'commit') => {
     if (!parsedData || parsedData.validRows.length === 0) return;
-
     setImporting(true);
     setParseError(null);
-
     try {
-      const payloadStudents = parsedData.validRows
-        .map(r => r.payload)
-        .filter(Boolean);
-
+      const payloadStudents = parsedData.validRows.map(row => row.payload).filter(Boolean);
       const res = await fetch('/api/v1/students/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ students: payloadStudents }),
+        body: JSON.stringify({ students: payloadStudents, mode }),
       });
-
       const body = await res.json();
-      if (!res.ok || !body.success) {
-        throw new Error(body.error?.message || body.error?.code || 'Gagal melakukan impor data siswa');
-      }
-
-      setImportReport(body.data as ImportReport);
+      if (!res.ok || !body.success) throw new Error(body.error?.message || body.error?.code || 'Gagal memproses import');
+      return body.data as ImportReport;
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat mengimpor data';
-      setParseError(msg);
+      setParseError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem saat mengimpor data');
+      return null;
     } finally {
       setImporting(false);
     }
+  };
+
+  const handleStartImport = async () => {
+    const preview = await sendImport('preview');
+    if (!preview) return;
+    setImportReport(preview);
+    const pending = preview.results.filter(item => item.status === 'update' || item.status === 'create');
+    if (!pending.length) return;
+    const updateCount = pending.filter(item => item.status === 'update').length;
+    const createCount = pending.filter(item => item.status === 'create').length;
+    const confirmed = window.confirm(
+      `Ditemukan ${updateCount} data yang akan diperbarui dan ${createCount} data baru.\n\n` +
+      'Kolom Excel yang kosong tidak akan menghapus data lama. Lanjutkan penyimpanan perubahan?'
+    );
+    if (!confirmed) return;
+    const committed = await sendImport('commit');
+    if (committed) setImportReport(committed);
   };
 
   const handleCloseReport = () => {
@@ -266,7 +286,7 @@ export default function StudentBulkUploadModal({
                           key={idx}
                           style={{
                             borderBottom: '1px solid #f1f5f9',
-                            background: res.status === 'success' ? '#fff' : '#fff5f5',
+                            background: res.status === 'created' || res.status === 'updated' || res.status === 'success' ? '#fff' : res.status === 'unchanged' ? '#f8fafc' : '#fff5f5',
                           }}
                         >
                           <td style={{ padding: '8px 12px', color: '#64748b' }}>#{res.row}</td>
@@ -279,15 +299,15 @@ export default function StudentBulkUploadModal({
                                 borderRadius: '6px',
                                 fontSize: '11px',
                                 fontWeight: 700,
-                                background: res.status === 'success' ? '#dcfce7' : '#fee2e2',
-                                color: res.status === 'success' ? '#15803d' : '#b91c1c',
+                                background: res.status === 'created' || res.status === 'updated' || res.status === 'success' ? '#dcfce7' : res.status === 'unchanged' ? '#e2e8f0' : res.status === 'update' || res.status === 'create' ? '#fef3c7' : '#fee2e2',
+                                color: res.status === 'created' || res.status === 'updated' || res.status === 'success' ? '#15803d' : res.status === 'unchanged' ? '#475569' : res.status === 'update' || res.status === 'create' ? '#92400e' : '#b91c1c',
                               }}
                             >
-                              {res.status === 'success' ? 'Sukses' : 'Gagal'}
+                              {res.status === 'created' ? 'Baru dibuat' : res.status === 'updated' ? 'Diperbarui' : res.status === 'unchanged' ? 'Tidak berubah' : res.status === 'update' ? 'Akan diperbarui' : res.status === 'create' ? 'Akan dibuat' : res.status === 'success' ? 'Sukses' : 'Gagal'}
                             </span>
                           </td>
-                          <td style={{ padding: '8px 12px', color: res.status === 'success' ? '#047857' : '#b91c1c' }}>
-                            {res.status === 'success' ? `ID: ${res.studentNumber || res.studentId}` : res.error}
+                          <td style={{ padding: '8px 12px', color: res.status === 'failed' ? '#b91c1c' : '#047857' }}>
+                            {res.status === 'failed' ? res.error : res.changes?.length ? res.changes.map(change => `${change.label}: ${change.before || '(kosong)'} → ${change.after}`).join(' · ') : `ID: ${res.studentNumber || res.studentId || 'Data sama'}`}
                           </td>
                         </tr>
                       ))}
