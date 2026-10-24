@@ -86,7 +86,30 @@ export default function StudentsPage() {
   const [error, setError] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
+  async function exportStudents() {
+    setExporting(true);
+    try {
+      const p = new URLSearchParams();
+      if (search) p.set('search', search);
+      if (status) p.set('status', status);
+      if (institution) p.set('institution', institution);
+      const response = await fetch(`/api/v1/students/export?${p.toString()}`);
+      if (!response.ok) throw new Error('Gagal mengekspor data siswa');
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `export-master-students-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Gagal mengekspor data siswa');
+    } finally {
+      setExporting(false);
+    }
+  }
   async function load(page = 1) {
     setLoading(true);
     setError('');
@@ -130,7 +153,15 @@ export default function StudentsPage() {
         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
           <button
             className="detail-button"
-            id="bulk-upload-student-button"
+            id="export-students-button"
+            type="button"
+            onClick={exportStudents}
+            disabled={exporting}
+            style={{ background: '#fff', border: '1.5px solid #64748b', color: '#475569', borderRadius: '8px', padding: '10px 16px', fontSize: '13px', fontWeight: 700, cursor: exporting ? 'wait' : 'pointer' }}
+          >
+            {exporting ? 'Menyiapkan...' : 'Export Excel (.xlsx)'}
+          </button>
+          <button
             type="button"
             onClick={() => setBulkUploadOpen(true)}
             style={{
