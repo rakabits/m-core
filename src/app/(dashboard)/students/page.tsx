@@ -1,1 +1,401 @@
-'use client'; /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */ import { useRouter, useSearchParams } from 'next/navigation'; import { useEffect, useState } from 'react';  type Student = { student_id: string; student_number?: string; photo_url?: string | null; full_name: string; gender: string; birth_place?: string | null; birth_date?: string | null; nik?: string | null; email?: string | null; phone?: string | null; whatsapp?: string | null; active_program?: { program_name: string; class_name?: string | null; academic_year?: string | null } | null; status: string }; type Result = { data: Student[]; meta: { page: number; per_page: number; total: number; total_pages: number } }; const SearchIcon = () => <svg className="students-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="11" cy="11" r="6.5" /><path d="m16 16 4 4" strokeLinecap="round" /></svg>; const ArrowIcon = () => <svg className="students-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M5 12h13M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>; const ChevronIcon = () => <svg className="students-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m7 10 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>; async function parseResponse<T>(response: Response): Promise<T> { const text = await response.text(); if (!text.trim()) return {} as T; try { return JSON.parse(text) as T } catch { throw new Error(`Response server tidak valid (HTTP ${response.status})`) } } export default function StudentsPage() {     const router = useRouter(); const searchParams = useSearchParams(); const institution = searchParams.get('institution') || ''; const [result, setResult] = useState<Result>({ data: [], meta: { page: 1, per_page: 50, total: 0, total_pages: 0 } }); const [search, setSearch] = useState(''); const [status, setStatus] = useState(''); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);     async function load(page = 1) { setLoading(true); setError(''); const p = new URLSearchParams({ page: String(page), per_page: '50' }); if (search) p.set('search', search); if (status) p.set('status', status); if (institution) p.set('institution', institution); try { const r = await fetch(`/api/v1/students?${p}`); const json = await parseResponse<{ error?: { code?: string }; data?: Student[]; meta?: Result['meta'] }>(r); if (!r.ok) throw new Error(json.error?.code || `Gagal memuat data (HTTP ${r.status})`); if (!json.data || !json.meta) throw new Error('Format data siswa tidak valid'); setResult(json as Result) } catch (e) { setError(e instanceof Error ? e.message : 'Gagal memuat data') } finally { setLoading(false) } }     useEffect(() => { const timer = window.setTimeout(() => load(), 300); return () => window.clearTimeout(timer) }, [search, status, institution]);       return <main className="students-page"><header className="class-hero students-feature-hero"><div className="class-hero-copy"><span className="eyebrow"><i />STUDENT MANAGEMENT</span><h1>Master Students</h1><p>Kelola data siswa aktif, identitas, dan program akademik secara terpusat.</p></div><div className="class-hero-year"><span>{institution ? 'FILTER INSTITUSI' : 'TOTAL SISWA'}</span><strong>{institution || result.meta.total}</strong><small>{institution ? 'Student directory' : 'data terdaftar'}</small></div><button className="primary-button create-student-button" id="create-student-button" type="button" onClick={() => router.push('/students/new')}>+ Siswa baru</button></header><section className="toolbar directory-search" aria-label="Filter siswa"><form onSubmit={e => { e.preventDefault(); load() }}><label className="search-field"><SearchIcon /><input id="student-search" aria-label="Cari nama siswa, ID, atau tempat" placeholder="Cari nama siswa, ID, atau tempat..." value={search} onChange={e => setSearch(e.target.value)} /></label><button type="submit" className="search-button">Cari</button></form><label className="filter-field"><select id="student-status-filter" aria-label="Filter status siswa" value={status} onChange={e => setStatus(e.target.value)}><option value="">Semua status</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="alumni">Alumni</option></select><ChevronIcon /></label></section><section className="student-card directory-card"><div className="card-heading"><div><span className="section-kicker">DIRECTORY</span><h2>Daftar siswa</h2></div><span className="count-pill">{result.meta.total} total</span></div>{loading ? <div className="state">Memuat data siswa...</div> : error ? <div className="state error">{error}</div> : result.data.length === 0 ? <div className="state">Belum ada siswa yang cocok.</div> : <div className="student-list directory-list">{result.data.map(student => <article className="student-row directory-row" key={student.student_id}><div className="student-info"><span className="directory-student-id">{student.student_number || 'ΓÇö'}</span><strong>{student.full_name}</strong><div className="directory-meta"><span className="directory-meta-item">{student.gender === 'male' ? 'Laki-laki' : student.gender === 'female' ? 'Perempuan' : 'Belum tersedia'}</span><span className="directory-meta-item">{student.email || 'Belum tersedia'}</span><span className="directory-meta-item">{student.whatsapp || student.phone || 'Belum tersedia'}</span><span className="directory-meta-item">{student.birth_date ? new Date(student.birth_date).toLocaleDateString('id-ID') : 'Belum tersedia'}</span><span className="directory-meta-item">{student.nik || 'Belum tersedia'}</span><span className="directory-meta-item directory-meta-program">{student.active_program?.program_name || 'Belum ada program'}</span></div></div><span className={`status status-${student.status}`}>{student.status}</span><button className="detail-button directory-edit" aria-label={`Edit ${student.full_name}`} onClick={() => router.push(`/students/${student.student_id}`)}>Edit</button><button className="detail-button directory-detail" aria-label={`Lihat ${student.full_name}`} onClick={() => setSelectedStudent(student)}>Lihat <ArrowIcon /></button></article>)}</div>}<footer className="pagination"><button disabled={result.meta.page <= 1 || loading} onClick={() => load(result.meta.page - 1)}>Sebelumnya</button><span>Halaman {result.meta.page} / {Math.max(1, result.meta.total_pages)}</span><button disabled={result.meta.page >= result.meta.total_pages || loading} onClick={() => load(result.meta.page + 1)}>Berikutnya <ArrowIcon /></button></footer></section>{selectedStudent && <div className="student-profile-modal" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setSelectedStudent(null) }}><section className="student-profile-dialog" role="dialog" aria-modal="true" aria-labelledby="student-profile-title"><button type="button" className="student-profile-close" aria-label="Tutup Student Profile" onClick={() => setSelectedStudent(null)}>├ù</button><div className="student-profile-heading">{selectedStudent.photo_url ? <img src={selectedStudent.photo_url} alt={`Foto ${selectedStudent.full_name}`} /> : <div className="student-profile-avatar">{selectedStudent.full_name.slice(0, 1).toUpperCase()}</div>}<div><p className="eyebrow">STUDENT PROFILE</p><h2 id="student-profile-title">{selectedStudent.full_name}</h2><span>Student ID: {selectedStudent.student_number || selectedStudent.student_id}</span></div></div><div className="student-profile-grid"><div><span className="section-kicker">IDENTITAS SISWA</span><p><span>Gender</span><b>:</b><strong>{selectedStudent.gender === 'male' ? 'Laki-laki' : 'Perempuan'}</strong></p><p><span>Tempat lahir</span><b>:</b><strong>{selectedStudent.birth_place || 'Belum diisi'}</strong></p><p><span>Tanggal lahir</span><b>:</b><strong>{selectedStudent.birth_date ? new Date(selectedStudent.birth_date).toLocaleDateString('id-ID') : 'Belum diisi'}</strong></p><p><span>NIK</span><b>:</b><strong>{selectedStudent.nik || 'Belum diisi'}</strong></p><p><span>Status</span><b>:</b><strong><span className={`status status-${selectedStudent.status}`}>{selectedStudent.status}</span></strong></p></div><div><span className="section-kicker">KONTAK</span><p><span>Email</span><b>:</b><strong>{selectedStudent.email || 'Belum diisi'}</strong></p><p><span>Telepon</span><b>:</b><strong>{selectedStudent.phone || 'Belum diisi'}</strong></p><p><span>WhatsApp</span><b>:</b><strong>{selectedStudent.whatsapp || 'Belum diisi'}</strong></p></div><div><span className="section-kicker">PROGRAM AKTIF</span><div className="student-program-fields"><p><span>Program:</span><strong>{selectedStudent.active_program?.program_name || 'Belum ada program aktif'}</strong></p><p><span>Kelas:</span><strong>{selectedStudent.active_program?.class_name || 'Kelas belum tersedia'}</strong></p><p><span>Tahun ajaran:</span><strong>{selectedStudent.active_program?.academic_year || 'Tahun ajaran belum tersedia'}</strong></p></div></div></div><div className="student-profile-actions"><button type="button" className="detail-button" onClick={() => router.push(`/students/${selectedStudent.student_id}`)}>Buka profil lengkap</button><button type="button" className="primary-button" onClick={() => setSelectedStudent(null)}>Tutup</button></div></section></div>}</main>;  }
+'use client';
+
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import StudentBulkUploadModal from '@/components/students/StudentBulkUploadModal';
+
+type Student = {
+  student_id: string;
+  student_number?: string;
+  photo_url?: string | null;
+  full_name: string;
+  gender: string;
+  birth_place?: string | null;
+  birth_date?: string | null;
+  nik?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  whatsapp?: string | null;
+  active_program?: {
+    program_name: string;
+    class_name?: string | null;
+    academic_year?: string | null;
+  } | null;
+  status: string;
+};
+
+type Result = {
+  data: Student[];
+  meta: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+  };
+};
+
+const SearchIcon = () => (
+  <svg className="students-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <circle cx="11" cy="11" r="6.5" />
+    <path d="m16 16 4 4" strokeLinecap="round" />
+  </svg>
+);
+
+const ArrowIcon = () => (
+  <svg className="students-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="M5 12h13M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const ChevronIcon = () => (
+  <svg className="students-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+    <path d="m7 10 5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const UploadIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="17 8 12 3 7 8" />
+    <line x1="12" y1="3" x2="12" y2="15" />
+  </svg>
+);
+
+async function parseResponse<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text.trim()) return {} as T;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(`Response server tidak valid (HTTP ${response.status})`);
+  }
+}
+
+export default function StudentsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const institution = searchParams.get('institution') || '';
+  const [result, setResult] = useState<Result>({
+    data: [],
+    meta: { page: 1, per_page: 50, total: 0, total_pages: 0 },
+  });
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+
+  async function load(page = 1) {
+    setLoading(true);
+    setError('');
+    const p = new URLSearchParams({ page: String(page), per_page: '50' });
+    if (search) p.set('search', search);
+    if (status) p.set('status', status);
+    if (institution) p.set('institution', institution);
+    try {
+      const r = await fetch(`/api/v1/students?${p}`);
+      const json = await parseResponse<{ error?: { code?: string }; data?: Student[]; meta?: Result['meta'] }>(r);
+      if (!r.ok) throw new Error(json.error?.code || `Gagal memuat data (HTTP ${r.status})`);
+      if (!json.data || !json.meta) throw new Error('Format data siswa tidak valid');
+      setResult(json as Result);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Gagal memuat data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => load(), 300);
+    return () => window.clearTimeout(timer);
+  }, [search, status, institution]);
+
+  return (
+    <main className="students-page">
+      <header className="class-hero students-feature-hero">
+        <div className="class-hero-copy">
+          <span className="eyebrow">
+            <i />STUDENT MANAGEMENT
+          </span>
+          <h1>Master Students</h1>
+          <p>Kelola data siswa aktif, identitas, dan program akademik secara terpusat.</p>
+        </div>
+        <div className="class-hero-year">
+          <span>{institution ? 'FILTER INSTITUSI' : 'TOTAL SISWA'}</span>
+          <strong>{institution || result.meta.total}</strong>
+          <small>{institution ? 'Student directory' : 'data terdaftar'}</small>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            className="detail-button"
+            id="bulk-upload-student-button"
+            type="button"
+            onClick={() => setBulkUploadOpen(true)}
+            style={{
+              background: '#fff',
+              border: '1.5px solid #0f9f93',
+              color: '#0f9f93',
+              borderRadius: '8px',
+              padding: '10px 16px',
+              fontSize: '13px',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '7px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(15, 159, 147, 0.12)',
+              transition: 'all 0.2s',
+            }}
+          >
+            <UploadIcon />
+            Upload Massal (.xlsx)
+          </button>
+          <button
+            className="primary-button create-student-button"
+            id="create-student-button"
+            type="button"
+            onClick={() => router.push('/students/new')}
+          >
+            + Siswa baru
+          </button>
+        </div>
+      </header>
+
+      <section className="toolbar directory-search" aria-label="Filter siswa">
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            load();
+          }}
+        >
+          <label className="search-field">
+            <SearchIcon />
+            <input
+              id="student-search"
+              aria-label="Cari nama siswa, ID, atau tempat"
+              placeholder="Cari nama siswa, ID, atau tempat..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </label>
+          <button type="submit" className="search-button">
+            Cari
+          </button>
+        </form>
+        <label className="filter-field">
+          <select
+            id="student-status-filter"
+            aria-label="Filter status siswa"
+            value={status}
+            onChange={e => setStatus(e.target.value)}
+          >
+            <option value="">Semua status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+            <option value="alumni">Alumni</option>
+          </select>
+          <ChevronIcon />
+        </label>
+      </section>
+
+      <section className="student-card directory-card">
+        <div className="card-heading">
+          <div>
+            <span className="section-kicker">DIRECTORY</span>
+            <h2>Daftar siswa</h2>
+          </div>
+          <span className="count-pill">{result.meta.total} total</span>
+        </div>
+        {loading ? (
+          <div className="state">Memuat data siswa...</div>
+        ) : error ? (
+          <div className="state error">{error}</div>
+        ) : result.data.length === 0 ? (
+          <div className="state">Belum ada siswa yang cocok.</div>
+        ) : (
+          <div className="student-list directory-list">
+            {result.data.map(student => (
+              <article className="student-row directory-row" key={student.student_id}>
+                <div className="student-info">
+                  <span className="directory-student-id">{student.student_number || '—'}</span>
+                  <strong>{student.full_name}</strong>
+                  <div className="directory-meta">
+                    <span className="directory-meta-item">
+                      {student.gender === 'male' ? 'Laki-laki' : student.gender === 'female' ? 'Perempuan' : 'Belum tersedia'}
+                    </span>
+                    <span className="directory-meta-item">{student.email || 'Belum tersedia'}</span>
+                    <span className="directory-meta-item">{student.whatsapp || student.phone || 'Belum tersedia'}</span>
+                    <span className="directory-meta-item">
+                      {student.birth_date ? new Date(student.birth_date).toLocaleDateString('id-ID') : 'Belum tersedia'}
+                    </span>
+                    <span className="directory-meta-item">{student.nik || 'Belum tersedia'}</span>
+                    <span className="directory-meta-item directory-meta-program">
+                      {student.active_program?.program_name || 'Belum ada program'}
+                    </span>
+                  </div>
+                </div>
+                <span className={`status status-${student.status}`}>{student.status}</span>
+                <button
+                  className="detail-button directory-edit"
+                  aria-label={`Edit ${student.full_name}`}
+                  onClick={() => router.push(`/students/${student.student_id}`)}
+                >
+                  Edit
+                </button>
+                <button
+                  className="detail-button directory-detail"
+                  aria-label={`Lihat ${student.full_name}`}
+                  onClick={() => setSelectedStudent(student)}
+                >
+                  Lihat <ArrowIcon />
+                </button>
+              </article>
+            ))}
+          </div>
+        )}
+        <footer className="pagination">
+          <button disabled={result.meta.page <= 1 || loading} onClick={() => load(result.meta.page - 1)}>
+            Sebelumnya
+          </button>
+          <span>
+            Halaman {result.meta.page} / {Math.max(1, result.meta.total_pages)}
+          </span>
+          <button
+            disabled={result.meta.page >= result.meta.total_pages || loading}
+            onClick={() => load(result.meta.page + 1)}
+          >
+            Berikutnya <ArrowIcon />
+          </button>
+        </footer>
+      </section>
+
+      {/* Detail Profile Modal */}
+      {selectedStudent && (
+        <div
+          className="student-profile-modal"
+          role="presentation"
+          onMouseDown={event => {
+            if (event.target === event.currentTarget) setSelectedStudent(null);
+          }}
+        >
+          <section className="student-profile-dialog" role="dialog" aria-modal="true" aria-labelledby="student-profile-title">
+            <button
+              type="button"
+              className="student-profile-close"
+              aria-label="Tutup Student Profile"
+              onClick={() => setSelectedStudent(null)}
+            >
+              ×
+            </button>
+            <div className="student-profile-heading">
+              {selectedStudent.photo_url ? (
+                <img src={selectedStudent.photo_url} alt={`Foto ${selectedStudent.full_name}`} />
+              ) : (
+                <div className="student-profile-avatar">{selectedStudent.full_name.slice(0, 1).toUpperCase()}</div>
+              )}
+              <div>
+                <p className="eyebrow">STUDENT PROFILE</p>
+                <h2 id="student-profile-title">{selectedStudent.full_name}</h2>
+                <span>Student ID: {selectedStudent.student_number || selectedStudent.student_id}</span>
+              </div>
+            </div>
+            <div className="student-profile-grid">
+              <div>
+                <span className="section-kicker">IDENTITAS SISWA</span>
+                <p>
+                  <span>Gender</span>
+                  <b>:</b>
+                  <strong>{selectedStudent.gender === 'male' ? 'Laki-laki' : 'Perempuan'}</strong>
+                </p>
+                <p>
+                  <span>Tempat lahir</span>
+                  <b>:</b>
+                  <strong>{selectedStudent.birth_place || 'Belum diisi'}</strong>
+                </p>
+                <p>
+                  <span>Tanggal lahir</span>
+                  <b>:</b>
+                  <strong>
+                    {selectedStudent.birth_date
+                      ? new Date(selectedStudent.birth_date).toLocaleDateString('id-ID')
+                      : 'Belum diisi'}
+                  </strong>
+                </p>
+                <p>
+                  <span>NIK</span>
+                  <b>:</b>
+                  <strong>{selectedStudent.nik || 'Belum diisi'}</strong>
+                </p>
+                <p>
+                  <span>Status</span>
+                  <b>:</b>
+                  <strong>
+                    <span className={`status status-${selectedStudent.status}`}>{selectedStudent.status}</span>
+                  </strong>
+                </p>
+              </div>
+              <div>
+                <span className="section-kicker">KONTAK</span>
+                <p>
+                  <span>Email</span>
+                  <b>:</b>
+                  <strong>{selectedStudent.email || 'Belum diisi'}</strong>
+                </p>
+                <p>
+                  <span>Telepon</span>
+                  <b>:</b>
+                  <strong>{selectedStudent.phone || 'Belum diisi'}</strong>
+                </p>
+                <p>
+                  <span>WhatsApp</span>
+                  <b>:</b>
+                  <strong>{selectedStudent.whatsapp || 'Belum diisi'}</strong>
+                </p>
+              </div>
+              <div>
+                <span className="section-kicker">PROGRAM AKTIF</span>
+                <div className="student-program-fields">
+                  <p>
+                    <span>Program:</span>
+                    <strong>{selectedStudent.active_program?.program_name || 'Belum ada program aktif'}</strong>
+                  </p>
+                  <p>
+                    <span>Kelas:</span>
+                    <strong>{selectedStudent.active_program?.class_name || 'Kelas belum tersedia'}</strong>
+                  </p>
+                  <p>
+                    <span>Tahun ajaran:</span>
+                    <strong>{selectedStudent.active_program?.academic_year || 'Tahun ajaran belum tersedia'}</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+            <div className="student-profile-actions">
+              <button
+                type="button"
+                className="detail-button"
+                onClick={() => router.push(`/students/${selectedStudent.student_id}`)}
+              >
+                Buka profil lengkap
+              </button>
+              <button type="button" className="primary-button" onClick={() => setSelectedStudent(null)}>
+                Tutup
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+
+      {/* Bulk Upload Modal */}
+      <StudentBulkUploadModal
+        isOpen={bulkUploadOpen}
+        onClose={() => setBulkUploadOpen(false)}
+        onSuccess={() => {
+          load();
+        }}
+      />
+    </main>
+  );
+}
