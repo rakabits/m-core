@@ -91,7 +91,7 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
     [selectedFields],
   );
 
-  const set = (key: string, value: string) => setForm((prev) => ({ ...prev, [key]: value }));
+  const set = (key: string, value: string, uppercase = true) => setForm((prev) => ({ ...prev, [key]: uppercase ? value.toUpperCase() : value }));
 
   const checkNik = useCallback((nik: string, tok: string) => {
     if (nikDebounceRef.current) clearTimeout(nikDebounceRef.current);
@@ -123,7 +123,7 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
       const res = await fetch(`/api/v1/public-registration/${token}/payment-proof`, { method: 'POST', body });
       const result = await res.json();
       if (!res.ok || !result.data?.url) throw new Error(result.error?.message || 'Upload gagal');
-      set(fieldKey, result.data.url);
+      set(fieldKey, result.data.url, false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Upload gagal');
     } finally {
@@ -153,6 +153,11 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
     const email = String(form.email).trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setError('Format email tidak valid.');
+      return false;
+    }
+
+    if (!/^\d{16}$/.test(String(form.nationalId || ''))) {
+      setError('NIK wajib terdiri dari tepat 16 digit angka.');
       return false;
     }
 
@@ -275,8 +280,13 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
                     <label>NIK
                       <input
                         required
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]{16}"
+                        minLength={16}
+                        maxLength={16}
                         value={form.nationalId || ''}
-                        onChange={(e) => { set('nationalId', e.target.value); checkNik(e.target.value, token); }}
+                        onChange={(e) => { const value = e.target.value.replace(/\D/g, '').slice(0, 16); set('nationalId', value); checkNik(value, token); }}
                         aria-describedby="nik-status"
                         aria-invalid={nikStatus.ok === false}
                       />
@@ -293,25 +303,25 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
                       <input required value={form.birthPlace || ''} onChange={(e) => set('birthPlace', e.target.value)} />
                     </label>
                     <label>Tanggal lahir
-                      <input required type="date" value={form.birthDate || ''} onChange={(e) => set('birthDate', e.target.value)} />
+                      <input required type="date" value={form.birthDate || ''} onChange={(e) => set('birthDate', e.target.value, false)} />
                     </label>
                   </div>
 
                   <label className="form-span-full">Email
-                    <input required type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value)} />
+                    <input required type="email" value={form.email || ''} onChange={(e) => set('email', e.target.value, false)} />
                   </label>
 
                   <div className="two-fields">
                     <label>Nomor HP siswa
-                      <input required value={form.studentPhone || ''} onChange={(e) => set('studentPhone', e.target.value)} />
+                      <input required inputMode="numeric" pattern="[0-9]*" value={form.studentPhone || ''} onChange={(e) => set('studentPhone', e.target.value.replace(/\D/g, ''), false)} />
                     </label>
                     <label>WhatsApp siswa
-                      <input required value={form.studentWhatsapp || ''} onChange={(e) => set('studentWhatsapp', e.target.value)} />
+                      <input required inputMode="numeric" pattern="[0-9]*" value={form.studentWhatsapp || ''} onChange={(e) => set('studentWhatsapp', e.target.value.replace(/\D/g, ''), false)} />
                     </label>
                   </div>
 
                   <label className="form-span-full">Nomor HP orang tua
-                    <input required value={form.parentPhone || ''} onChange={(e) => set('parentPhone', e.target.value)} />
+                    <input required inputMode="numeric" pattern="[0-9]*" value={form.parentPhone || ''} onChange={(e) => set('parentPhone', e.target.value.replace(/\D/g, ''), false)} />
                   </label>
                 </>
               )}
@@ -380,7 +390,7 @@ export default function PublicRegistrationPage({ params }: { params: Promise<{ t
                           </div>
                           <div className="two-fields">
                             <label>Tahun lulus
-                              <input type="number" value={form[`${level}.graduationYear`] || ''} onChange={(e) => set(`${level}.graduationYear`, e.target.value)} />
+                              <input type="number" value={form[`${level}.graduationYear`] || ''} onChange={(e) => set(`${level}.graduationYear`, e.target.value, false)} />
                             </label>
                             {!['educationSd', 'educationSmp'].includes(level) && (
                               <label>Jurusan
