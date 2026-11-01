@@ -352,8 +352,6 @@ export default function StudentsPage() {
             <span>ID Siswa</span>
             <span>Nama</span>
             <span>Jenis kelamin</span>
-            <span>Email</span>
-            <span>WhatsApp</span>
             <span>Tanggal lahir</span>
             <span>NIK</span>
             <span>Program</span>
@@ -371,8 +369,6 @@ export default function StudentsPage() {
                     <span className="directory-meta-item">
                       {student.gender === 'male' ? 'Laki-laki' : student.gender === 'female' ? 'Perempuan' : 'Belum tersedia'}
                     </span>
-                    <span className="directory-meta-item">{student.email || 'Belum tersedia'}</span>
-                    <span className="directory-meta-item">{student.whatsapp || student.phone || 'Belum tersedia'}</span>
                     <span className="directory-meta-item">
                       {student.birth_date ? new Date(student.birth_date).toLocaleDateString('id-ID') : 'Belum tersedia'}
                     </span>

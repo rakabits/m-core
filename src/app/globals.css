@@ -1680,7 +1680,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 
 /* Keep selection, student ID, and name in distinct columns. */
 .directory-card .directory-row {
-  grid-template-columns: 24px 72px 150px 92px 185px 135px 135px 120px 125px minmax(120px, 1fr) max-content max-content max-content !important;
+  grid-template-columns: 24px 72px 150px 110px 135px 125px minmax(120px, 1fr) max-content max-content max-content !important;
   column-gap: 10px;
   min-width: 1180px !important;
 }
@@ -1710,7 +1710,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 /* Column labels for the student directory. */
 .directory-table-header {
   display: grid;
-  grid-template-columns: 24px 72px 150px 92px 185px 135px 135px 120px 125px minmax(120px, 1fr) max-content max-content max-content;
+  grid-template-columns: 24px 72px 150px 110px 135px 125px minmax(120px, 1fr) max-content max-content max-content;
   column-gap: 10px;
   min-width: 1180px;
   padding: 8px 0 7px;
