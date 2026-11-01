@@ -317,8 +317,8 @@ export default function StudentsPage() {
       )}
 
       {selectedIds.length > 0 && (
-        <section style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', padding: '12px 16px', marginBottom: '14px', background: '#eefaf8', border: '1px solid #b8e6df', borderRadius: '10px' }}>
-          <strong>{selectedIds.length} siswa dipilih</strong>
+        <section className="bulk-selection-panel">
+          <strong className="bulk-selection-title">{selectedIds.length} siswa dipilih</strong>
           <select value={bulkStatus} onChange={event => setBulkStatus(event.target.value)} aria-label="Status baru untuk edit massal">
             <option value="pending_review">Perlu ditinjau</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="alumni">Alumni</option>
           </select>
