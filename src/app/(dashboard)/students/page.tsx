@@ -348,7 +348,7 @@ export default function StudentsPage() {
         ) : (
           <>
           <div className="directory-table-header" aria-hidden="true">
-            <span></span>
+            <span>Pilih</span>
             <span>ID Siswa</span>
             <span>Nama</span>
             <span>Jenis kelamin</span>

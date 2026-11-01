@@ -1736,3 +1736,24 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 @media (max-width: 900px) {
   .directory-table-header { min-width: 1180px; }
 }
+.directory-card .directory-table-header span:first-child,
+.directory-card .directory-row > .student-select-checkbox {
+  justify-self: center;
+  align-self: center;
+}
+.directory-card .directory-row > .student-select-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #8a97a5;
+  border-radius: 3px;
+  background: #fff;
+  cursor: pointer;
+  display: block;
+}
+.directory-card .directory-row > .student-select-checkbox:checked {
+  border-color: var(--teal);
+  background: var(--teal);
+  box-shadow: inset 0 0 0 3px #fff;
+}
