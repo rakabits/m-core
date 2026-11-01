@@ -1799,3 +1799,21 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
   .directory-card .directory-table-header,
   .directory-card .directory-row { padding-left: 14px; padding-right: 14px; }
 }
+/* Keep every directory cell vertically centered within its row. */
+.directory-card .directory-row > *,
+.directory-card .directory-row .student-info strong,
+.directory-card .directory-row .directory-meta-item {
+  align-self: center !important;
+}
+.directory-card .directory-row .student-info strong,
+.directory-card .directory-row .directory-student-id,
+.directory-card .directory-row .directory-meta-item {
+  display: block;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+.directory-card .directory-row > .status,
+.directory-card .directory-row > .directory-edit,
+.directory-card .directory-row > .directory-detail {
+  align-self: center !important;
+}
