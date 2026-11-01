@@ -346,6 +346,20 @@ export default function StudentsPage() {
         ) : result.data.length === 0 ? (
           <div className="state">Belum ada siswa yang cocok.</div>
         ) : (
+          <>
+          <div className="directory-table-header" aria-hidden="true">
+            <span></span>
+            <span>ID Siswa</span>
+            <span>Nama</span>
+            <span>Jenis kelamin</span>
+            <span>Email</span>
+            <span>WhatsApp</span>
+            <span>Tanggal lahir</span>
+            <span>NIK</span>
+            <span>Program</span>
+            <span>Status</span>
+            <span>Aksi</span>
+          </div>
           <div className="student-list directory-list">
             {result.data.map(student => (
               <article className="student-row directory-row" key={student.student_id}>
@@ -386,6 +400,7 @@ export default function StudentsPage() {
               </article>
             ))}
           </div>
+          </>
         )}
         <footer className="pagination">
           <button disabled={result.meta.page <= 1 || loading} onClick={() => load(result.meta.page - 1)}>
