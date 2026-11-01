@@ -97,6 +97,7 @@ export default function StudentsPage() {
   const [bulkAcademicYear, setBulkAcademicYear] = useState('');
   const [bulkClassName, setBulkClassName] = useState('');
   const [classes, setClasses] = useState<Array<{ id: string; name: string; code: string }>>([]);
+  const [bulkDialog, setBulkDialog] = useState<'status' | 'program' | null>(null);
 
   async function exportStudents() {
     setExporting(true);
@@ -307,6 +308,43 @@ export default function StudentsPage() {
         </label>
       </section>
 
+      {bulkDialog && (
+        <div className="bulk-dialog-backdrop" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setBulkDialog(null); }}>
+          <section className="bulk-dialog" role="dialog" aria-modal="true" aria-labelledby="bulk-dialog-title">
+            <div className="bulk-dialog-header">
+              <div>
+                <span className="section-kicker">BULK ACTION</span>
+                <h2 id="bulk-dialog-title">{bulkDialog === 'status' ? 'Ubah status massal' : 'Tetapkan program'}</h2>
+              </div>
+              <button type="button" className="bulk-dialog-close" onClick={() => setBulkDialog(null)} aria-label="Tutup popup">×</button>
+            </div>
+            {bulkDialog === 'status' ? (
+              <label className="bulk-dialog-field">Status baru
+                <select value={bulkStatus} onChange={event => setBulkStatus(event.target.value)}>
+                  <option value="pending_review">Perlu ditinjau</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="alumni">Alumni</option>
+                </select>
+              </label>
+            ) : (
+              <div className="bulk-dialog-fields">
+                <label className="bulk-dialog-field">Program
+                  <select value={bulkProgramId} onChange={event => { setBulkProgramId(event.target.value); const program = programs.find(item => item.id === event.target.value); if (program) setBulkAcademicYear(program.academicYear); }}><option value="">Pilih program</option>{programs.map(program => <option key={program.id} value={program.id}>{program.programName} ({program.academicYear})</option>)}</select>
+                </label>
+                <label className="bulk-dialog-field">Tahun ajaran
+                  <input value={bulkAcademicYear} onChange={event => setBulkAcademicYear(event.target.value)} placeholder="YYYY/YYYY" />
+                </label>
+                <label className="bulk-dialog-field">Kelas
+                  <select value={bulkClassName} onChange={event => setBulkClassName(event.target.value)}><option value="">Tanpa kelas</option>{classes.map(item => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select>
+                </label>
+              </div>
+            )}
+            <div className="bulk-dialog-actions">
+              <button type="button" className="detail-button" onClick={() => setBulkDialog(null)}>Batal</button>
+              <button type="button" className="primary-button" onClick={async () => { setBulkDialog(null); if (bulkDialog === 'status') await bulkUpdateStatus(); else await bulkPlaceProgram(); }} disabled={bulkSaving || (bulkDialog === 'program' && (!bulkProgramId || !bulkAcademicYear))}>{bulkSaving ? 'Menyiapkan...' : 'Lanjutkan'}</button>
+            </div>
+          </section>
+        </div>
+      )}
+
       {bulkPreview && (
         <section style={{ padding: '14px 16px', marginBottom: '14px', background: '#fffaf0', border: '1px solid #f0d58a', borderRadius: '10px' }}>
           <strong>Preview perubahan: {bulkPreview.data.total} siswa</strong>
@@ -319,14 +357,8 @@ export default function StudentsPage() {
       {selectedIds.length > 0 && (
         <section className="bulk-selection-panel">
           <strong className="bulk-selection-title">{selectedIds.length} siswa dipilih</strong>
-          <select value={bulkStatus} onChange={event => setBulkStatus(event.target.value)} aria-label="Status baru untuk edit massal">
-            <option value="pending_review">Perlu ditinjau</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="alumni">Alumni</option>
-          </select>
-          <button type="button" className="primary-button" onClick={bulkUpdateStatus} disabled={bulkSaving}>{bulkSaving ? 'Menyimpan...' : 'Ubah Status Massal'}</button>
-          <select value={bulkProgramId} onChange={event => { setBulkProgramId(event.target.value); const program = programs.find(item => item.id === event.target.value); if (program) setBulkAcademicYear(program.academicYear); }} aria-label="Program penempatan massal"><option value="">Pilih program</option>{programs.map(program => <option key={program.id} value={program.id}>{program.programName} ({program.academicYear})</option>)}</select>
-          <input value={bulkAcademicYear} onChange={event => setBulkAcademicYear(event.target.value)} placeholder="YYYY/YYYY" aria-label="Tahun akademik penempatan" />
-          <select value={bulkClassName} onChange={event => setBulkClassName(event.target.value)} aria-label="Kelas penempatan"><option value="">Tanpa kelas</option>{classes.map(item => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select>
-          <button type="button" className="detail-button" onClick={bulkPlaceProgram} disabled={bulkSaving || !bulkProgramId || !bulkAcademicYear}>Tetapkan Program</button>
+          <button type="button" className="primary-button" onClick={() => setBulkDialog('status')} disabled={bulkSaving}>Ubah Status Massal</button>
+          <button type="button" className="detail-button" onClick={() => setBulkDialog('program')} disabled={bulkSaving}>Tetapkan Program</button>
           <button type="button" className="detail-button" onClick={() => setSelectedIds([])} disabled={bulkSaving}>Batal</button>
         </section>
       )}

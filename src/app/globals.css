@@ -1802,7 +1802,7 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 /* Bulk selection controls and visible checkbox state. */
 .bulk-selection-panel {
   display: grid;
-  grid-template-columns: minmax(140px, max-content) minmax(180px, 1fr) max-content;
+  grid-template-columns: 1fr repeat(3, max-content);
   align-items: center;
   gap: 10px;
   padding: 14px 16px;
@@ -1816,11 +1816,8 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 .bulk-selection-panel input { min-width: 0; width: 100%; }
 .bulk-selection-panel .primary-button,
 .bulk-selection-panel .detail-button { white-space: nowrap; }
-.bulk-selection-panel .primary-button { grid-column: 1; }
-.bulk-selection-panel select[aria-label="Program penempatan massal"] { grid-column: 1 / span 2; }
-.bulk-selection-panel input[aria-label="Tahun akademik penempatan"] { grid-column: 1; }
-.bulk-selection-panel select[aria-label="Kelas penempatan"] { grid-column: 2; }
-.bulk-selection-panel .detail-button { grid-column: 3; }
+.bulk-selection-panel .primary-button,
+.bulk-selection-panel .detail-button { grid-column: auto; }
 .directory-card .directory-row > .student-select-checkbox:checked {
   appearance: none;
   -webkit-appearance: none;
@@ -1832,9 +1829,52 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
   border-color: var(--teal-dark) !important;
   box-shadow: none !important;
 }
+.bulk-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 35, 38, 0.42);
+}
+.bulk-dialog {
+  width: min(100%, 480px);
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #d5e7e4;
+  border-radius: 16px;
+  box-shadow: 0 24px 70px rgba(15, 35, 38, 0.22);
+}
+.bulk-dialog-header,
+.bulk-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.bulk-dialog-header { margin-bottom: 20px; }
+.bulk-dialog-header h2 { margin: 4px 0 0; color: var(--ink); font-size: 20px; }
+.bulk-dialog-close {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  background: #edf6f4;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.bulk-dialog-field { display: grid; gap: 7px; color: var(--ink); font-size: 12px; font-weight: 700; }
+.bulk-dialog-field select,
+.bulk-dialog-field input { width: 100%; min-height: 40px; }
+.bulk-dialog-fields { display: grid; gap: 14px; }
+.bulk-dialog-actions { justify-content: flex-end; margin-top: 24px; }
 @media (max-width: 700px) {
   .bulk-selection-panel { grid-template-columns: 1fr; }
   .bulk-selection-panel > * { grid-column: 1 !important; }
+  .bulk-dialog { padding: 18px; }
 }
 
 /* Keep every directory cell vertically centered within its row. */
