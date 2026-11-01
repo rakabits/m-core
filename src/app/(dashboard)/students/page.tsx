@@ -349,7 +349,7 @@ export default function StudentsPage() {
           <div className="student-list directory-list">
             {result.data.map(student => (
               <article className="student-row directory-row" key={student.student_id}>
-                <input type="checkbox" aria-label={`Pilih ${student.full_name}`} checked={selectedIds.includes(student.student_id)} onChange={() => toggleStudent(student.student_id)} />
+                <input className="student-select-checkbox" type="checkbox" aria-label={`Pilih ${student.full_name}`} checked={selectedIds.includes(student.student_id)} onChange={() => toggleStudent(student.student_id)} />
                 <div className="student-info">
                   <span className="directory-student-id">{student.student_number || '—'}</span>
                   <strong>{student.full_name}</strong>
