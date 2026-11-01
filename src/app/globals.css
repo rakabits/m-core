@@ -1677,3 +1677,33 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
 
 .academic-table .lifecycle-action { font-size: 10px; }
 
+
+/* Keep selection, student ID, and name in distinct columns. */
+.directory-card .directory-row {
+  grid-template-columns: 24px 72px 150px 92px 185px 135px 135px 120px 125px minmax(120px, 1fr) max-content max-content max-content !important;
+  column-gap: 10px;
+  min-width: 1180px !important;
+}
+.directory-card .directory-row > .student-select-checkbox {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  justify-self: center;
+  align-self: center;
+}
+.directory-card .directory-student-id { grid-column: 2 !important; grid-row: 1 !important; }
+.directory-card .directory-row .student-info strong { grid-column: 3 !important; grid-row: 1 !important; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.directory-card .directory-meta-item:nth-child(1) { grid-column: 4 !important; grid-row: 1 !important; }
+.directory-card .directory-meta-item:nth-child(2) { grid-column: 5 !important; grid-row: 1 !important; }
+.directory-card .directory-meta-item:nth-child(3) { grid-column: 6 !important; grid-row: 1 !important; }
+.directory-card .directory-meta-item:nth-child(4) { grid-column: 7 !important; grid-row: 1 !important; }
+.directory-card .directory-meta-item:nth-child(5) { grid-column: 8 !important; grid-row: 1 !important; }
+.directory-card .directory-meta-item:nth-child(6) { grid-column: 9 !important; grid-row: 1 !important; }
+.directory-card .directory-row > .status { grid-column: 10 !important; grid-row: 1 !important; }
+.directory-card .directory-edit { grid-column: 11 !important; grid-row: 1 !important; }
+.directory-card .directory-detail { grid-column: 12 !important; grid-row: 1 !important; }
+@media (max-width: 900px) {
+  .directory-card .directory-row { min-width: 1180px !important; }
+}
