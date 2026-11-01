@@ -173,6 +173,10 @@ export default function StudentsPage() {
       const response = await fetch('/api/v1/students/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: selectedIds, status: bulkStatus, mode: 'commit' }) });
       const body = await response.json();
       if (!response.ok || !body.success) throw new Error(body.error?.message || 'Gagal mengubah status siswa');
+      if (body.data?.failed > 0) {
+        const failedMessage = body.data.results?.find((item: { status: string; error?: string }) => item.status === 'failed')?.error;
+        throw new Error(`${body.data.failed} siswa gagal diubah${failedMessage ? `: ${failedMessage}` : '.'}`);
+      }
       setSelectedIds([]); setBulkPreview(null); await load(result.meta.page);
     } catch (e) { setError(e instanceof Error ? e.message : 'Gagal mengubah status siswa'); } finally { setBulkSaving(false); }
   }

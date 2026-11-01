@@ -37,7 +37,13 @@ export async function POST(request: NextRequest) {
         results.push({ studentId: id, status: 'failed', error: error?.message || 'Gagal memperbarui siswa' });
       }
     }
-    return NextResponse.json({ success: true, data: { mode, total: ids.length, updated: results.filter(item => item.status === 'updated').length, failed: results.filter(item => item.status === 'failed').length, results } });
+    const updated = results.filter(item => item.status === 'updated').length;
+    const failed = results.filter(item => item.status === 'failed').length;
+    if (failed > 0) {
+      const firstFailure = results.find(item => item.status === 'failed');
+      return NextResponse.json({ success: false, data: { mode, total: ids.length, updated, failed, results }, error: { code: 'PARTIAL_UPDATE', message: `${failed} siswa gagal diubah${firstFailure?.error ? `: ${firstFailure.error}` : '.'}` } }, { status: 422 });
+    }
+    return NextResponse.json({ success: true, data: { mode, total: ids.length, updated, failed, results } });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: { code: 'INTERNAL_ERROR', message: error?.message || 'Gagal mengubah siswa secara massal.' } }, { status: 500 });
   }
