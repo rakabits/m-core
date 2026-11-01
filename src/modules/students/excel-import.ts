@@ -146,7 +146,12 @@ export function downloadStudentTemplate() {
       'Kota Sekolah Terakhir': 'Jakarta Pusat',
       'Provinsi Sekolah Terakhir': 'DKI Jakarta',
       'Tahun Lulus': 2024,
-      'Status': 'active',
+      'Status': 'pending_review',
+      'Status Tujuan Alumni': '',
+      'Nama Institusi / Perusahaan Alumni': '',
+      'Program Studi / Pekerjaan Alumni': '',
+      'Kota Tujuan Alumni': '',
+      'Tahun Mulai Alumni': '',
     },
     {
       'Nama Lengkap *': 'Fatimah Az-Zahra',
@@ -205,7 +210,12 @@ export function downloadStudentTemplate() {
       'Kota Sekolah Terakhir': 'Bandung',
       'Provinsi Sekolah Terakhir': 'Jawa Barat',
       'Tahun Lulus': 2024,
-      'Status': 'active',
+      'Status': 'pending_review',
+      'Status Tujuan Alumni': '',
+      'Nama Institusi / Perusahaan Alumni': '',
+      'Program Studi / Pekerjaan Alumni': '',
+      'Kota Tujuan Alumni': '',
+      'Tahun Mulai Alumni': '',
     },
   ];
 
@@ -223,7 +233,7 @@ export function downloadStudentTemplate() {
     ['Tanggal lahir gunakan format YYYY-MM-DD, contoh: 2008-05-15.'],
     ['NIK, NISN, nomor telepon, dan kode pos sebaiknya diformat sebagai Text agar angka 0 di depan tidak hilang.'],
     ['Wali berbeda: isi Ya pada kolom tersebut lalu lengkapi data wali dan hubungan wali.'],
-    ['Status menerima: active, inactive, atau alumni.'],
+    ['Status menerima: pending_review, active, inactive, atau alumni. Siswa baru sebaiknya menggunakan pending_review sampai diverifikasi.'],
     ['Semua data orang tua dan wali bersifat opsional kecuali nama ayah dan nama ibu pada template ini.'],
   ];
   const instructionSheet = XLSX.utils.aoa_to_sheet(instructions);
@@ -329,7 +339,12 @@ export async function parseStudentExcel(file: File): Promise<ParseResult> {
     const weightRaw = Number(findVal('berat badan', 'weight')) || null;
     const siblingCountRaw = Number(findVal('jumlah saudara', 'sibling count')) || null;
     const birthOrderRaw = Number(findVal('anak ke', 'birth order')) || null;
-    const statusRaw = String(findVal('status')).trim().toLowerCase() || 'active';
+    const statusRaw = String(findVal('status')).trim().toLowerCase() || 'pending_review';
+    const alumniDestinationStatusRaw = String(findVal('status tujuan alumni')).trim().toLowerCase();
+    const alumniDestinationNameRaw = String(findVal('nama institusi', 'perusahaan alumni')).trim();
+    const alumniDestinationProgramRaw = String(findVal('program studi', 'pekerjaan alumni')).trim();
+    const alumniDestinationCityRaw = String(findVal('kota tujuan alumni')).trim();
+    const alumniDestinationYearRaw = Number(findVal('tahun mulai alumni')) || null;
     const guardianDifferentRaw = String(findVal('wali berbeda')).trim().toLowerCase();
     const guardianSourceRaw = String(findVal('sumber wali')).trim().toLowerCase();
     const guardianNameRaw = String(findVal('nama wali')).trim();
@@ -381,7 +396,7 @@ export async function parseStudentExcel(file: File): Promise<ParseResult> {
     const motherName = motherNameRaw || (fullNameRaw ? `Ibu ${fullNameRaw}` : 'Ibu Siswa');
     const guardianIsDifferent = ['ya', 'yes', 'true', '1'].includes(guardianDifferentRaw);
     const guardianSource = guardianSourceRaw.includes('ibu') ? 'mother' : guardianSourceRaw.includes('lain') || guardianSourceRaw.includes('other') ? 'other' : 'father';
-    const normalizedStatus = ['active', 'inactive', 'alumni'].includes(statusRaw) ? statusRaw as 'active' | 'inactive' | 'alumni' : 'active';
+    const normalizedStatus = ['pending_review', 'active', 'inactive', 'alumni'].includes(statusRaw) ? statusRaw as 'pending_review' | 'active' | 'inactive' | 'alumni' : 'pending_review';
     const educationLevelMap: Record<string, 'elementary' | 'junior_high' | 'senior_high' | 'university_s1' | 'university_s2' | 'university_s3'> = {
       sd: 'elementary', mi: 'elementary', smp: 'junior_high', mts: 'junior_high', sma: 'senior_high', smk: 'senior_high', ma: 'senior_high',
       s1: 'university_s1', s2: 'university_s2', s3: 'university_s3',
@@ -420,6 +435,11 @@ export async function parseStudentExcel(file: File): Promise<ParseResult> {
         siblingCount: siblingCountRaw,
         birthOrder: birthOrderRaw,
         status: normalizedStatus,
+        alumniDestinationStatus: alumniDestinationStatusRaw || null,
+        alumniDestinationName: alumniDestinationNameRaw || null,
+        alumniDestinationProgram: alumniDestinationProgramRaw || null,
+        alumniDestinationCity: alumniDestinationCityRaw || null,
+        alumniDestinationYear: alumniDestinationYearRaw,
         parents: {
           father: {
             fullName: fatherName, nik: fatherNikRaw || null, phone: cleanFatherPhone,

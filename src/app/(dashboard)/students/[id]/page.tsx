@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 type Parent = { id?: string; role?: string; fullName: string; nik?: string | null; phone?: string | null; education?: string | null; educationOther?: string | null; occupation?: string | null; occupationOther?: string | null; monthlyIncome?: number | null; relationship?: string | null };
 type Guardian = { guardianIsDifferent: boolean; guardianSource: 'father' | 'mother' | 'other'; otherParent?: Parent | null };
 type Student = {
-  student_id: string; student_number?: string; mts_student_id?: string | null; ma_student_id?: string | null; photo_url?: string | null; full_name: string; gender: string; birth_place?: string | null; birth_date?: string | null; status: string; email?: string | null; nik?: string | null; nisn?: string | null; family_card_number?: string | null; passport_number?: string | null; phone?: string | null; whatsapp?: string | null; telegram_username?: string | null; address?: { line?: string | null; rt?: string | null; rw?: string | null; village?: string | null; district?: string | null; city_regency?: string | null; province?: string | null; postal_code?: string | null }; physical?: { height_cm?: number | string | null; weight_kg?: number | string | null; sibling_count?: number | null; birth_order?: number | null }; education_histories?: Array<{ id: string; level: string; institutionName: string; cityRegency?: string | null; province?: string | null; graduationYear?: number | null; degreeLevel?: string | null }>; parents?: Parent[]; guardian?: Guardian | null;
+  student_id: string; student_number?: string; mts_student_id?: string | null; alumni_destination?: { status?: string | null; name?: string | null; program?: string | null; city?: string | null; year?: number | null }; ma_student_id?: string | null; photo_url?: string | null; full_name: string; gender: string; birth_place?: string | null; birth_date?: string | null; status: string; email?: string | null; nik?: string | null; nisn?: string | null; family_card_number?: string | null; passport_number?: string | null; phone?: string | null; whatsapp?: string | null; telegram_username?: string | null; address?: { line?: string | null; rt?: string | null; rw?: string | null; village?: string | null; district?: string | null; city_regency?: string | null; province?: string | null; postal_code?: string | null }; physical?: { height_cm?: number | string | null; weight_kg?: number | string | null; sibling_count?: number | null; birth_order?: number | null }; education_histories?: Array<{ id: string; level: string; institutionName: string; cityRegency?: string | null; province?: string | null; graduationYear?: number | null; degreeLevel?: string | null }>; parents?: Parent[]; guardian?: Guardian | null;
   active_program?: { program_id?: string; program_name: string; class_name?: string | null; academic_year?: string | null } | null;
   program_histories?: Array<{ id: string; academicYear: string; level?: string | null; className?: string | null; status: string; program: { programName: string; programCode?: string; academicLevel?: string | null }; class?: { name: string; code?: string; homeRoomTeacher?: { displayName: string } | null } | null }>;
 };
@@ -109,6 +109,11 @@ export default function StudentDetailPage() {
         email: form.email || null,
         phone: form.phone || null,
         whatsapp: form.whatsapp || null,
+        alumniDestinationStatus: form.alumni_destination?.status || null,
+        alumniDestinationName: form.alumni_destination?.name || null,
+        alumniDestinationProgram: form.alumni_destination?.program || null,
+        alumniDestinationCity: form.alumni_destination?.city || null,
+        alumniDestinationYear: form.alumni_destination?.year || null,
         parents: { father: parents.father, mother: parents.mother },
         guardian: { ...guardian, ...(guardian.guardianSource === 'other' ? { other: parents.other } : {}) },
       }),
@@ -315,11 +320,19 @@ export default function StudentDetailPage() {
                 value={form.status || 'active'}
                 onChange={(e) => setForm({ ...form, status: e.target.value })}
               >
+                <option value="pending_review">Perlu ditinjau</option>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
                 <option value="alumni">Alumni</option>
               </select>
             </label>
+            {form.status === 'alumni' && <>
+              <label>Status tujuan alumni<select value={form.alumni_destination?.status || ''} onChange={e => setForm({ ...form, alumni_destination: { ...form.alumni_destination, status: e.target.value } })}><option value="">Belum diketahui</option><option value="education">Melanjutkan pendidikan</option><option value="work">Bekerja</option><option value="entrepreneur">Wirausaha</option><option value="not_continuing">Tidak melanjutkan</option></select></label>
+              <label>Nama institusi / perusahaan<input value={form.alumni_destination?.name || ''} onChange={e => setForm({ ...form, alumni_destination: { ...form.alumni_destination, name: e.target.value } })} /></label>
+              <label>Program studi / pekerjaan<input value={form.alumni_destination?.program || ''} onChange={e => setForm({ ...form, alumni_destination: { ...form.alumni_destination, program: e.target.value } })} /></label>
+              <label>Kota<input value={form.alumni_destination?.city || ''} onChange={e => setForm({ ...form, alumni_destination: { ...form.alumni_destination, city: e.target.value } })} /></label>
+              <label>Tahun mulai<input type="number" min="1900" max="2200" value={form.alumni_destination?.year || ''} onChange={e => setForm({ ...form, alumni_destination: { ...form.alumni_destination, year: e.target.value ? Number(e.target.value) : null } })} /></label>
+            </>}
           </div>
           <div className="parent-grid">
             {(['father', 'mother'] as const).map((role) => <fieldset className="parent-fieldset" key={role}><legend>{role === 'father' ? 'Ayah' : 'Ibu'}</legend><label>Nama lengkap<input required value={parents[role].fullName} onChange={(e) => setParents((current) => ({ ...current, [role]: { ...current[role], fullName: e.target.value } }))} /></label><label>Nomor HP<input type="tel" value={parents[role].phone || ''} onChange={(e) => setParents((current) => ({ ...current, [role]: { ...current[role], phone: e.target.value } }))} /></label><label>Pekerjaan<input value={parents[role].occupation || ''} onChange={(e) => setParents((current) => ({ ...current, [role]: { ...current[role], occupation: e.target.value } }))} /></label><label>Penghasilan bulanan (Rp)<input type="number" min="0" step="1" value={parents[role].monthlyIncome ?? ''} onChange={(e) => setParents((current) => ({ ...current, [role]: { ...current[role], monthlyIncome: e.target.value ? Number(e.target.value) : null } }))} /></label></fieldset>)}

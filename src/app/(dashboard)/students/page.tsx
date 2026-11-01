@@ -82,11 +82,21 @@ export default function StudentsPage() {
   });
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
+  const [completeness, setCompleteness] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [bulkStatus, setBulkStatus] = useState('pending_review');
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [bulkPreview, setBulkPreview] = useState<{ kind: 'status' | 'program'; data: { total: number; status?: string; program?: { programName: string }; academicYear?: string; existing?: unknown[] } } | null>(null);
+  const [programs, setPrograms] = useState<Array<{ id: string; programName: string; academicYear: string }>>([]);
+  const [bulkProgramId, setBulkProgramId] = useState('');
+  const [bulkAcademicYear, setBulkAcademicYear] = useState('');
+  const [bulkClassName, setBulkClassName] = useState('');
+  const [classes, setClasses] = useState<Array<{ id: string; name: string; code: string }>>([]);
 
   async function exportStudents() {
     setExporting(true);
@@ -110,12 +120,69 @@ export default function StudentsPage() {
       setExporting(false);
     }
   }
+  function toggleStudent(id: string) {
+    setSelectedIds(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
+  }
+
+  useEffect(() => {
+    if (!selectedIds.length) return;
+    fetch('/api/v1/students/bulk-program').then(response => response.json()).then(body => setPrograms(body.data || [])).catch(() => setPrograms([]));
+  }, [selectedIds.length]);
+
+  useEffect(() => {
+    if (!bulkProgramId || !bulkAcademicYear) { setClasses([]); return; }
+    fetch(`/api/v1/students/bulk-program/classes?programId=${encodeURIComponent(bulkProgramId)}&academicYear=${encodeURIComponent(bulkAcademicYear)}`).then(response => response.json()).then(body => setClasses(body.data || [])).catch(() => setClasses([]));
+  }, [bulkProgramId, bulkAcademicYear]);
+
+  async function bulkPlaceProgram() {
+    if (!selectedIds.length || !bulkProgramId || !bulkAcademicYear) return;
+    setBulkSaving(true);
+    const previewResponse = await fetch('/api/v1/students/bulk-program', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: selectedIds, programId: bulkProgramId, academicYear: bulkAcademicYear, classId: bulkClassName || null, mode: 'preview' }) });
+    const previewBody = await previewResponse.json();
+    if (!previewResponse.ok || !previewBody.success) { setError(previewBody.error?.message || 'Gagal menyiapkan preview'); setBulkSaving(false); return; }
+    setBulkPreview({ kind: 'program', data: previewBody.data });
+    setBulkSaving(false);
+  }
+
+  async function commitBulkProgram() {
+    setBulkSaving(true);
+    try {
+      const response = await fetch('/api/v1/students/bulk-program', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: selectedIds, programId: bulkProgramId, academicYear: bulkAcademicYear, classId: bulkClassName || null, mode: 'commit' }) });
+      const body = await response.json();
+      if (!response.ok || !body.success) throw new Error(body.error?.message || 'Gagal menetapkan program');
+      setSelectedIds([]); setBulkPreview(null);
+      await load(result.meta.page);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Gagal menetapkan program'); } finally { setBulkSaving(false); }
+  }
+
+  async function bulkUpdateStatus() {
+    if (!selectedIds.length) return;
+    setBulkSaving(true);
+    try {
+      const response = await fetch('/api/v1/students/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: selectedIds, status: bulkStatus, mode: 'preview' }) });
+      const body = await response.json();
+      if (!response.ok || !body.success) throw new Error(body.error?.message || 'Gagal menyiapkan preview');
+      setBulkPreview({ kind: 'status', data: body.data });
+    } catch (e) { setError(e instanceof Error ? e.message : 'Gagal menyiapkan preview'); } finally { setBulkSaving(false); }
+  }
+
+  async function commitBulkStatus() {
+    setBulkSaving(true);
+    try {
+      const response = await fetch('/api/v1/students/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ studentIds: selectedIds, status: bulkStatus, mode: 'commit' }) });
+      const body = await response.json();
+      if (!response.ok || !body.success) throw new Error(body.error?.message || 'Gagal mengubah status siswa');
+      setSelectedIds([]); setBulkPreview(null); await load(result.meta.page);
+    } catch (e) { setError(e instanceof Error ? e.message : 'Gagal mengubah status siswa'); } finally { setBulkSaving(false); }
+  }
+
   async function load(page = 1) {
     setLoading(true);
     setError('');
     const p = new URLSearchParams({ page: String(page), per_page: '50' });
     if (search) p.set('search', search);
     if (status) p.set('status', status);
+    if (completeness) p.set('completeness', completeness);
     if (institution) p.set('institution', institution);
     try {
       const r = await fetch(`/api/v1/students?${p}`);
@@ -133,7 +200,7 @@ export default function StudentsPage() {
   useEffect(() => {
     const timer = window.setTimeout(() => load(), 300);
     return () => window.clearTimeout(timer);
-  }, [search, status, institution]);
+  }, [search, status, completeness, institution]);
 
   return (
     <main className="students-page">
@@ -214,6 +281,14 @@ export default function StudentsPage() {
           <button type="submit" className="search-button">
             Cari
           </button>
+          <label className="filter-field">
+            <select value={completeness} onChange={e => setCompleteness(e.target.value)} aria-label="Filter kelengkapan data">
+              <option value="">Semua kelengkapan</option>
+              <option value="incomplete">Data belum lengkap</option>
+              <option value="unassigned">Belum ada program</option>
+            </select>
+            <ChevronIcon />
+          </label>
         </form>
         <label className="filter-field">
           <select
@@ -223,6 +298,7 @@ export default function StudentsPage() {
             onChange={e => setStatus(e.target.value)}
           >
             <option value="">Semua status</option>
+            <option value="pending_review">Perlu ditinjau</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
             <option value="alumni">Alumni</option>
@@ -230,6 +306,30 @@ export default function StudentsPage() {
           <ChevronIcon />
         </label>
       </section>
+
+      {bulkPreview && (
+        <section style={{ padding: '14px 16px', marginBottom: '14px', background: '#fffaf0', border: '1px solid #f0d58a', borderRadius: '10px' }}>
+          <strong>Preview perubahan: {bulkPreview.data.total} siswa</strong>
+          <p style={{ margin: '6px 0' }}>{bulkPreview.kind === 'program' ? `Program tujuan: ${bulkPreview.data.program?.programName || '-'}, tahun ${bulkPreview.data.academicYear || '-'}. ${bulkPreview.data.existing?.length || 0} siswa memiliki program aktif yang akan dipindahkan.` : `Status tujuan: ${bulkPreview.data.status}.`}</p>
+          <button type="button" className="primary-button" onClick={bulkPreview.kind === 'program' ? commitBulkProgram : commitBulkStatus} disabled={bulkSaving}>{bulkSaving ? 'Menyimpan...' : 'Konfirmasi dan Simpan'}</button>
+          <button type="button" className="detail-button" onClick={() => setBulkPreview(null)} disabled={bulkSaving}>Batal</button>
+        </section>
+      )}
+
+      {selectedIds.length > 0 && (
+        <section style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', padding: '12px 16px', marginBottom: '14px', background: '#eefaf8', border: '1px solid #b8e6df', borderRadius: '10px' }}>
+          <strong>{selectedIds.length} siswa dipilih</strong>
+          <select value={bulkStatus} onChange={event => setBulkStatus(event.target.value)} aria-label="Status baru untuk edit massal">
+            <option value="pending_review">Perlu ditinjau</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="alumni">Alumni</option>
+          </select>
+          <button type="button" className="primary-button" onClick={bulkUpdateStatus} disabled={bulkSaving}>{bulkSaving ? 'Menyimpan...' : 'Ubah Status Massal'}</button>
+          <select value={bulkProgramId} onChange={event => { setBulkProgramId(event.target.value); const program = programs.find(item => item.id === event.target.value); if (program) setBulkAcademicYear(program.academicYear); }} aria-label="Program penempatan massal"><option value="">Pilih program</option>{programs.map(program => <option key={program.id} value={program.id}>{program.programName} ({program.academicYear})</option>)}</select>
+          <input value={bulkAcademicYear} onChange={event => setBulkAcademicYear(event.target.value)} placeholder="YYYY/YYYY" aria-label="Tahun akademik penempatan" />
+          <select value={bulkClassName} onChange={event => setBulkClassName(event.target.value)} aria-label="Kelas penempatan"><option value="">Tanpa kelas</option>{classes.map(item => <option key={item.id} value={item.id}>{item.name} ({item.code})</option>)}</select>
+          <button type="button" className="detail-button" onClick={bulkPlaceProgram} disabled={bulkSaving || !bulkProgramId || !bulkAcademicYear}>Tetapkan Program</button>
+          <button type="button" className="detail-button" onClick={() => setSelectedIds([])} disabled={bulkSaving}>Batal</button>
+        </section>
+      )}
 
       <section className="student-card directory-card">
         <div className="card-heading">
@@ -249,6 +349,7 @@ export default function StudentsPage() {
           <div className="student-list directory-list">
             {result.data.map(student => (
               <article className="student-row directory-row" key={student.student_id}>
+                <input type="checkbox" aria-label={`Pilih ${student.full_name}`} checked={selectedIds.includes(student.student_id)} onChange={() => toggleStudent(student.student_id)} />
                 <div className="student-info">
                   <span className="directory-student-id">{student.student_number || '—'}</span>
                   <strong>{student.full_name}</strong>
@@ -267,7 +368,7 @@ export default function StudentsPage() {
                     </span>
                   </div>
                 </div>
-                <span className={`status status-${student.status}`}>{student.status}</span>
+                <span className={`status status-${student.status}`}>{student.status === 'pending_review' ? 'Perlu ditinjau' : student.status}</span>
                 <button
                   className="detail-button directory-edit"
                   aria-label={`Edit ${student.full_name}`}

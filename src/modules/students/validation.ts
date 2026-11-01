@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { z } from 'zod';
 
-export const studentStatus = z.enum(['active', 'inactive', 'alumni']);
+export const studentStatus = z.enum(['pending_review', 'active', 'inactive', 'alumni']);
 export const gender = z.enum(['male', 'female']);
 export const guardianSource = z.enum(['father', 'mother', 'other']);
 const optionalText = (max = 150) => z.string().trim().max(max).optional().nullable();
@@ -27,7 +27,9 @@ const studentFields = z.object({
   email: z.string().email().max(150).optional().nullable(), phone: optionalText(20), whatsapp: optionalText(20), telegramUsername: optionalText(100),
   addressLine: optionalText(255), addressRt: optionalText(5), addressRw: optionalText(5), village: optionalText(100), district: optionalText(100), cityRegency: optionalText(100), province: optionalText(100), postalCode: optionalText(10),
   heightCm: z.coerce.number().positive().max(300).optional().nullable(), weightKg: z.coerce.number().positive().max(500).optional().nullable(), siblingCount: z.coerce.number().int().nonnegative().optional().nullable(), birthOrder: z.coerce.number().int().positive().optional().nullable(),
-  status: studentStatus.default('active'), parents: parentFields, guardian: guardianSchema.default({ guardianIsDifferent: false, guardianSource: 'father' }),
+  status: studentStatus.default('pending_review'),
+  alumniDestinationStatus: optionalText(50), alumniDestinationName: optionalText(150), alumniDestinationProgram: optionalText(150), alumniDestinationCity: optionalText(100), alumniDestinationYear: z.coerce.number().int().min(1900).max(2200).optional().nullable(),
+  parents: parentFields, guardian: guardianSchema.default({ guardianIsDifferent: false, guardianSource: 'father' }),
 });
 export const studentCreateSchema = studentFields.superRefine(parentPhoneRefinement);
 export const studentUpdateSchema = studentFields.partial().omit({ status: true }).extend({ status: studentStatus.optional() }).superRefine(parentPhoneRefinement);

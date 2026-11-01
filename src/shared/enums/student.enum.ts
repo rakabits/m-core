@@ -18,6 +18,9 @@
  * Referensi: DATABASE.md §9, BUSINESS_RULES.md §10-13
  */
 export enum StudentStatus {
+  /** Data baru yang belum diverifikasi dan belum ditempatkan ke program. */
+  PENDING_REVIEW = 'pending_review',
+
   /**
    * Siswa masih mengikuti program aktif.
    * Minimal harus memiliki satu program_history dengan status ENROLLED.
@@ -63,6 +66,7 @@ export const GENDER_LABEL: Record<Gender, string> = {
  * Label tampilan UI untuk StudentStatus.
  */
 export const STUDENT_STATUS_LABEL: Record<StudentStatus, string> = {
+  [StudentStatus.PENDING_REVIEW]: 'Perlu ditinjau',
   [StudentStatus.ACTIVE]: 'Aktif',
   [StudentStatus.ALUMNI]: 'Alumni',
   [StudentStatus.INACTIVE]: 'Nonaktif',

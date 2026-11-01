@@ -62,6 +62,7 @@ enum Gender {
 /// INACTIVE = tidak sedang aktif, belum alumni
 /// Referensi: DATABASE.md Ã‚Â§9, BUSINESS_RULES.md Ã‚Â§10-13
 enum StudentStatus {
+  pending_review
   active
   alumni
   inactive
@@ -154,9 +155,16 @@ model Student {
   birthOrder   Int?     @map("birth_order")
 
   /// Status siswa saat ini.
-  /// Default: ACTIVE saat pertama didaftarkan.
+  /// Siswa hasil upload awal masuk pending_review sampai diverifikasi.
   /// Perubahan status harus mengikuti BUSINESS_RULES.md.
-  status StudentStatus @default(active)
+  status StudentStatus @default(pending_review)
+
+  /// Informasi tujuan siswa setelah menjadi alumni.
+  alumniDestinationStatus  String? @map("alumni_destination_status") @db.VarChar(50)
+  alumniDestinationName    String? @map("alumni_destination_name") @db.VarChar(150)
+  alumniDestinationProgram String? @map("alumni_destination_program") @db.VarChar(150)
+  alumniDestinationCity    String? @map("alumni_destination_city") @db.VarChar(100)
+  alumniDestinationYear    Int?    @map("alumni_destination_year")
 
   /// Timestamp dibuat. Otomatis diisi saat insert.
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
