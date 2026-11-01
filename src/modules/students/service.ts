@@ -11,6 +11,7 @@ const DEFAULT_ACCOUNT_PASSWORD = 'Mumtaza2008';
 
 const activeProgramSelect = { where: { status: 'enrolled' }, include: { program: { select: { id: true, programName: true } } }, orderBy: { createdAt: 'desc' }, take: 1 } as const;
 const baseSelect = { id: true, studentNumber: true, mtsStudentId: true, maStudentId: true, photoUrl: true, photoPublicId: true, fullName: true, gender: true, birthPlace: true, birthDate: true, status: true, alumniDestinationStatus: true, alumniDestinationName: true, alumniDestinationProgram: true, alumniDestinationCity: true, alumniDestinationYear: true, nik: true, nisn: true, familyCardNumber: true, passportNumber: true, email: true, phone: true, whatsapp: true, telegramUsername: true, addressLine: true, addressRt: true, addressRw: true, village: true, district: true, cityRegency: true, province: true, postalCode: true, heightCm: true, weightKg: true, siblingCount: true, birthOrder: true, createdAt: true, updatedAt: true, parents: true, guardianConfig: { include: { otherParent: true } }, educationHistories: true, programHistories: activeProgramSelect } as const;
+const { alumniDestinationStatus: _alumniDestinationStatus, alumniDestinationName: _alumniDestinationName, alumniDestinationProgram: _alumniDestinationProgram, alumniDestinationCity: _alumniDestinationCity, alumniDestinationYear: _alumniDestinationYear, ...profileSelect } = baseSelect;
 
 // The directory does not need sensitive profile, parent, or education relations.
 const directorySelect = { id: true, studentNumber: true, photoUrl: true, fullName: true, gender: true, birthPlace: true, status: true, email: true, phone: true, whatsapp: true, programHistories: activeProgramSelect } as const;
@@ -66,7 +67,7 @@ export async function createStudent(input: StudentCreateInput, actorId?: string)
 }
 
 export async function getStudent(id: string, sensitive = false) {
-  const student = await prisma.student.findUnique({ where: { id }, select: { ...baseSelect, programHistories: { include: { program: { select: { id: true, programName: true, programCode: true, academicLevel: true } }, classEnrollment: { include: { class: { include: { homeRoomTeacher: { select: { id: true, displayName: true } } } } } } }, orderBy: { createdAt: 'desc' } } } });
+  const student = await prisma.student.findUnique({ where: { id }, select: { ...profileSelect, programHistories: { include: { program: { select: { id: true, programName: true, programCode: true, academicLevel: true } }, classEnrollment: { include: { class: { include: { homeRoomTeacher: { select: { id: true, displayName: true } } } } } } }, orderBy: { createdAt: 'desc' } } } });
   if (!student) return null;
   const histories = student.programHistories.map((history: any) => ({ id: history.id, academicYear: history.academicYear, level: history.level, className: history.className, status: history.status, program: history.program, class: history.classEnrollment?.class ? { id: history.classEnrollment.class.id, name: history.classEnrollment.class.name, code: history.classEnrollment.class.code, homeRoomTeacher: history.classEnrollment.class.homeRoomTeacher } : null }));
   const activeHistory = histories.find((history: any) => history.status === 'enrolled') ?? histories[0];
