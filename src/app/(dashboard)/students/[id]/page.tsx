@@ -156,7 +156,7 @@ export default function StudentDetailPage() {
   if (loading)
     return (
       <main className="students-page">
-        <div className="state">Memuat profil siswaÃ¢â‚¬Â¦</div>
+        <div className="state">Memuat profil siswa...</div>
       </main>
     );
   if (error && !student)
@@ -170,7 +170,7 @@ export default function StudentDetailPage() {
   return (
     <main className="students-page student-profile-page">
       <button className="detail-button" onClick={() => window.history.back()}>
-        Ã¢â€ Â Kembali
+        Kembali
       </button>
       <header className="students-header">
         <div>
