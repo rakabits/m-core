@@ -2,7 +2,7 @@
 
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import StudentBulkUploadModal from '@/components/students/StudentBulkUploadModal';
 
 type Student = {
@@ -89,6 +89,11 @@ export default function StudentsPage() {
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  const visibleStudentIds = result.data.map(student => student.student_id);
+  const selectedVisibleCount = visibleStudentIds.filter(id => selectedIds.includes(id)).length;
+  const allVisibleSelected = visibleStudentIds.length > 0 && selectedVisibleCount === visibleStudentIds.length;
+  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
   const [bulkStatus, setBulkStatus] = useState('pending_review');
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkPreview, setBulkPreview] = useState<{ kind: 'status' | 'program'; data: { total: number; status?: string; program?: { programName: string }; academicYear?: string; existing?: unknown[] } } | null>(null);
@@ -124,6 +129,17 @@ export default function StudentsPage() {
   function toggleStudent(id: string) {
     setSelectedIds(current => current.includes(id) ? current.filter(item => item !== id) : [...current, id]);
   }
+
+  function toggleVisibleStudents() {
+    setSelectedIds(current => {
+      if (allVisibleSelected) return current.filter(id => !visibleStudentIds.includes(id));
+      return Array.from(new Set([...current, ...visibleStudentIds]));
+    });
+  }
+
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = someVisibleSelected;
+  }, [someVisibleSelected]);
 
   useEffect(() => {
     if (!selectedIds.length) return;
@@ -383,8 +399,22 @@ export default function StudentsPage() {
           <div className="state">Belum ada siswa yang cocok.</div>
         ) : (
           <>
-          <div className="directory-table-header" aria-hidden="true">
-            <span aria-hidden="true"></span>
+          <div className="directory-table-header">
+            <label className="directory-select-all" title={allVisibleSelected ? 'Batalkan pilih semua data di halaman ini' : 'Pilih semua data di halaman ini'}>
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                aria-label={allVisibleSelected ? 'Batalkan pilih semua data di halaman ini' : 'Pilih semua data di halaman ini'}
+                checked={allVisibleSelected}
+                onChange={toggleVisibleStudents}
+              />
+              <span
+                className={`directory-select-all-mark${allVisibleSelected || someVisibleSelected ? ' is-active' : ''}`}
+                aria-hidden="true"
+              >
+                {allVisibleSelected ? '✓' : someVisibleSelected ? '−' : ''}
+              </span>
+            </label>
             <span>ID Siswa</span>
             <span>Nama</span>
             <span>Jenis kelamin</span>
