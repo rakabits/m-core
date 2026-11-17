@@ -9,15 +9,26 @@ function runMonthlyMCoreBackup() {
   if (!token) throw new Error('BACKUP_SCRIPT_TOKEN belum dikonfigurasi.');
 
   var period = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'yyyy-MM');
-  var response = UrlFetchApp.fetch(baseUrl + '/api/v1/backups/payload', {
-    method: 'get',
-    headers: { Authorization: 'Bearer ' + token },
-    muteHttpExceptions: true,
-  });
-  var payload = JSON.parse(response.getContentText());
-  if (response.getResponseCode() >= 300 || !payload.success) {
-    reportBackup(baseUrl, token, period, 'failed', 0, '', '', payload.error && payload.error.code);
-    throw new Error('Gagal mengambil payload M-CORE: ' + response.getContentText());
+  var payload;
+  var lastError = '';
+  for (var attempt = 1; attempt <= 3; attempt++) {
+    try {
+      var response = UrlFetchApp.fetch(baseUrl + '/api/v1/backups/payload', {
+        method: 'get',
+        headers: { Authorization: 'Bearer ' + token },
+        muteHttpExceptions: true,
+      });
+      payload = JSON.parse(response.getContentText());
+      if (response.getResponseCode() < 300 && payload.success) break;
+      lastError = response.getContentText();
+    } catch (error) {
+      lastError = String(error);
+    }
+    if (attempt < 3) Utilities.sleep(5000 * attempt);
+  }
+  if (!payload || !payload.success) {
+    reportBackup(baseUrl, token, period, 'failed', 0, '', '', lastError);
+    throw new Error('Gagal mengambil payload M-CORE setelah 3 percobaan: ' + lastError);
   }
 
   var spreadsheet = SpreadsheetApp.create('M-CORE Master Students ' + period);
