@@ -1838,6 +1838,11 @@ main.students-page.user-management-page .directory-search .search-field{margin:0
   .directory-card .directory-row { padding-left: 14px; padding-right: 14px; }
 }
 /* Bulk selection controls and visible checkbox state. */
+.backup-history-table { overflow-x: auto; }
+.backup-history-header, .backup-history-row { display: grid; grid-template-columns: 1fr 120px 80px 90px 190px 150px; gap: 12px; align-items: center; min-width: 820px; padding: 13px 20px; }
+.backup-history-header { background: #f8fafc; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.backup-history-row { border-bottom: 1px solid var(--line); font-size: 12px; }
+.backup-history-row a { color: var(--teal-dark); font-weight: 700; }
 .bulk-selection-panel {
   display: grid;
   grid-template-columns: 1fr repeat(3, max-content);

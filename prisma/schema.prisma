@@ -48,6 +48,13 @@ enum PaymentMethod {
   CASH
 }
 
+enum BackupStatus {
+  pending
+  running
+  success
+  failed
+}
+
 /// Jenis kelamin siswa.
 /// Nilai: male | female
 /// Referensi: DATABASE.md Â§8
@@ -613,6 +620,25 @@ model ScopeAssignment {
   @@index([programId])
   @@index([type])
   @@map("scope_assignments")
+}
+
+model BackupHistory {
+  id             String       @id @default(uuid()) @map("backup_id")
+  period         String       @unique @db.VarChar(7)
+  status         BackupStatus @default(pending)
+  totalStudents  Int?         @map("total_students")
+  spreadsheetName String?     @map("spreadsheet_name") @db.VarChar(255)
+  spreadsheetUrl String?      @map("spreadsheet_url") @db.VarChar(1000)
+  errorMessage   String?      @map("error_message") @db.Text
+  attempts       Int          @default(0)
+  startedAt      DateTime?    @map("started_at") @db.Timestamptz()
+  completedAt    DateTime?    @map("completed_at") @db.Timestamptz()
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt      DateTime     @updatedAt @map("updated_at") @db.Timestamptz()
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("backup_histories")
 }
 
 model AuditLog {
