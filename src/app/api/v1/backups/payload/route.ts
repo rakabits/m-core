@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/core/database/prisma';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 function authorized(request: Request) {
   const expected = process.env.BACKUP_SCRIPT_TOKEN;
   return Boolean(expected && request.headers.get('authorization') === `Bearer ${expected}`);
