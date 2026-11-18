@@ -2,7 +2,23 @@
  * Standalone Google Apps Script for the monthly M-CORE snapshot.
  * Configure MCORE_BASE_URL and BACKUP_SCRIPT_TOKEN in Script Properties before use.
  */
-function runMonthlyMCoreBackup() {
+function doPost(event) {
+  try {
+    var body = JSON.parse(event.postData.contents || '{}');
+    var expectedToken = PropertiesService.getScriptProperties().getProperty('BACKUP_SCRIPT_TOKEN');
+    if (!expectedToken || body.token !== expectedToken) return jsonResponse({ success: false, error: 'UNAUTHORIZED' });
+    runMonthlyMCoreBackup(body.period);
+    return jsonResponse({ success: true });
+  } catch (error) {
+    return jsonResponse({ success: false, error: String(error) });
+  }
+}
+
+function jsonResponse(body) {
+  return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function runMonthlyMCoreBackup(requestedPeriod) {
   Logger.log('Backup format: relational-v2');
   var props = PropertiesService.getScriptProperties();
   var baseUrl = props.getProperty('MCORE_BASE_URL') || 'https://www.m-core.my.id';
@@ -11,7 +27,7 @@ function runMonthlyMCoreBackup() {
   var token = props.getProperty('BACKUP_SCRIPT_TOKEN');
   if (!token) throw new Error('BACKUP_SCRIPT_TOKEN belum dikonfigurasi.');
 
-  var period = Utilities.formatDate(new Date(), 'Asia/Jakarta', 'yyyy-MM');
+  var period = requestedPeriod || Utilities.formatDate(new Date(), 'Asia/Jakarta', 'yyyy-MM');
   var payload;
   var lastError = '';
   for (var attempt = 1; attempt <= 3; attempt++) {
