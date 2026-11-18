@@ -11,12 +11,13 @@ async function admin() {
   return profile?.isActive && profile.roles.some(({ role }) => role.name === 'SUPER_ADMIN' || role.name === 'ADMIN') ? profile : null;
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   const user = await admin();
   if (!user) return NextResponse.json({ success: false, error: { code: 'FORBIDDEN' } }, { status: 403 });
   const period = periodNow();
+  const force = new URL(request.url).searchParams.get('force') === 'true';
   const existing = await prisma.backupHistory.findUnique({ where: { period } });
-  if (existing?.status === 'success') return NextResponse.json({ success: true, data: existing, reused: true });
+  if (existing?.status === 'success' && !force) return NextResponse.json({ success: true, data: existing, reused: true });
   const data = await prisma.backupHistory.upsert({ where: { period }, create: { period, status: 'pending', attempts: 0 }, update: { status: 'pending', errorMessage: null } });
   const webAppUrl = process.env.BACKUP_SCRIPT_WEB_APP_URL || 'https://script.google.com/macros/s/AKfycbztheVBXRpuZ7m2qgZjee-rA4Wi73TMKtBF0G_j5Efx9KSrmsxFFkZSnvLK1gIlfTiSpw/exec';
   const token = process.env.BACKUP_SCRIPT_TOKEN;
