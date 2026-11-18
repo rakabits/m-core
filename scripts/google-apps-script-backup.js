@@ -3,6 +3,7 @@
  * Configure MCORE_BASE_URL and BACKUP_SCRIPT_TOKEN in Script Properties before use.
  */
 function runMonthlyMCoreBackup() {
+  Logger.log('Backup format: relational-v2');
   var props = PropertiesService.getScriptProperties();
   var baseUrl = props.getProperty('MCORE_BASE_URL') || 'https://m-core.my.id';
   var token = props.getProperty('BACKUP_SCRIPT_TOKEN');
