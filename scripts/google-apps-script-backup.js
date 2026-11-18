@@ -44,7 +44,7 @@ function runMonthlyMCoreBackup() {
     var mother = parentsByRole.mother || {};
     var other = parentsByRole.other || {};
     var guardian = student.guardianConfig || {};
-    return [student.id, student.studentNumber, student.mtsStudentId, student.maStudentId, student.fullName, student.gender, student.birthPlace, student.birthDate, student.nik, student.nisn, student.familyCardNumber, student.passportNumber, student.email, student.phone, student.whatsapp, student.telegramUsername, student.addressLine, student.addressRt, student.addressRw, student.village, student.district, student.cityRegency, student.province, student.postalCode, student.heightCm, student.weightKg, student.siblingCount, student.birthOrder, student.status, student.alumniDestinationStatus, student.alumniDestinationName, student.alumniDestinationProgram, student.alumniDestinationCity, student.alumniDestinationYear, father.fullName, father.nik, father.phone, father.education, father.educationOther, father.occupation, father.occupationOther, father.monthlyIncome, mother.fullName, mother.nik, mother.phone, mother.education, mother.educationOther, mother.occupation, mother.occupationOther, mother.monthlyIncome, other.fullName, other.nik, other.phone, other.education, other.educationOther, other.occupation, other.occupationOther, other.monthlyIncome, other.relationship, guardian.guardianIsDifferent, guardian.guardianSource, student.createdAt, student.updatedAt];
+    return [student.id, student.studentNumber, student.mtsStudentId, student.maStudentId, student.fullName, student.gender, student.birthPlace, formatDateOnly(student.birthDate), student.nik, student.nisn, student.familyCardNumber, student.passportNumber, student.email, student.phone, student.whatsapp, student.telegramUsername, student.addressLine, student.addressRt, student.addressRw, student.village, student.district, student.cityRegency, student.province, student.postalCode, student.heightCm, student.weightKg, student.siblingCount, student.birthOrder, student.status, student.alumniDestinationStatus, student.alumniDestinationName, student.alumniDestinationProgram, student.alumniDestinationCity, student.alumniDestinationYear, father.fullName, father.nik, father.phone, father.education, father.educationOther, father.occupation, father.occupationOther, father.monthlyIncome, mother.fullName, mother.nik, mother.phone, mother.education, mother.educationOther, mother.occupation, mother.occupationOther, mother.monthlyIncome, other.fullName, other.nik, other.phone, other.education, other.educationOther, other.occupation, other.occupationOther, other.monthlyIncome, other.relationship, guardian.guardianIsDifferent, guardian.guardianSource, student.createdAt, student.updatedAt];
   });
   writeSheet(spreadsheet, 'Students', ['ID Siswa', 'Nomor Siswa', 'ID MTs', 'ID MA', 'Nama Lengkap', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'NIK', 'NISN', 'Nomor KK', 'Nomor Paspor', 'Email', 'Telepon', 'WhatsApp', 'Telegram', 'Alamat', 'RT', 'RW', 'Desa/Kelurahan', 'Kecamatan', 'Kota/Kabupaten', 'Provinsi', 'Kode Pos', 'Tinggi (cm)', 'Berat (kg)', 'Jumlah Saudara', 'Anak Ke-', 'Status', 'Status Tujuan Alumni', 'Nama Tujuan Alumni', 'Program Tujuan Alumni', 'Kota Tujuan Alumni', 'Tahun Tujuan Alumni', 'Nama Ayah', 'NIK Ayah', 'Telepon Ayah', 'Pendidikan Ayah', 'Pendidikan Lainnya Ayah', 'Pekerjaan Ayah', 'Pekerjaan Lainnya Ayah', 'Penghasilan Ayah', 'Nama Ibu', 'NIK Ibu', 'Telepon Ibu', 'Pendidikan Ibu', 'Pendidikan Lainnya Ibu', 'Pekerjaan Ibu', 'Pekerjaan Lainnya Ibu', 'Penghasilan Ibu', 'Nama Wali', 'NIK Wali', 'Telepon Wali', 'Pendidikan Wali', 'Pendidikan Lainnya Wali', 'Pekerjaan Wali', 'Pekerjaan Lainnya Wali', 'Penghasilan Wali', 'Hubungan Wali', 'Wali Berbeda', 'Sumber Wali', 'Dibuat Pada', 'Diperbarui Pada'], students);
 
@@ -62,6 +62,13 @@ function runMonthlyMCoreBackup() {
   writeSheet(spreadsheet, 'Program History', ['ID Siswa', 'Nomor Siswa', 'Nama Lengkap', 'Jenis Kelamin', 'ID Riwayat', 'ID Program', 'Nama Program', 'Tahun Ajaran', 'Status', 'Mulai', 'Selesai', 'Dibuat Pada', 'Diperbarui Pada'], programs);
 
   reportBackup(baseUrl, token, period, 'success', rows.length, spreadsheet.getName(), spreadsheet.getUrl(), '');
+}
+
+function formatDateOnly(value) {
+  if (!value) return '';
+  var date = new Date(value);
+  if (isNaN(date.getTime())) return value;
+  return Utilities.formatDate(date, 'Asia/Jakarta', 'yyyy-MM-dd');
 }
 
 function writeSheet(spreadsheet, name, headers, rows) {
