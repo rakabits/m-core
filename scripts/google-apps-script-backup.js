@@ -38,33 +38,28 @@ function runMonthlyMCoreBackup() {
   DriveApp.getFileById(spreadsheet.getId()).moveTo(backupFolder);
   var rows = payload.data || [];
   var students = rows.map(function (student) {
-    return [student.id, student.studentNumber, student.mtsStudentId, student.maStudentId, student.fullName, student.gender, student.birthPlace, student.birthDate, student.nik, student.nisn, student.familyCardNumber, student.passportNumber, student.email, student.phone, student.whatsapp, student.telegramUsername, student.addressLine, student.addressRt, student.addressRw, student.village, student.district, student.cityRegency, student.province, student.postalCode, student.heightCm, student.weightKg, student.siblingCount, student.birthOrder, student.status, student.alumniDestinationStatus, student.alumniDestinationName, student.alumniDestinationProgram, student.alumniDestinationCity, student.alumniDestinationYear, student.createdAt, student.updatedAt];
+    var parentsByRole = {};
+    (student.parents || []).forEach(function (parent) { parentsByRole[parent.role] = parent; });
+    var father = parentsByRole.father || {};
+    var mother = parentsByRole.mother || {};
+    var other = parentsByRole.other || {};
+    var guardian = student.guardianConfig || {};
+    return [student.id, student.studentNumber, student.mtsStudentId, student.maStudentId, student.fullName, student.gender, student.birthPlace, student.birthDate, student.nik, student.nisn, student.familyCardNumber, student.passportNumber, student.email, student.phone, student.whatsapp, student.telegramUsername, student.addressLine, student.addressRt, student.addressRw, student.village, student.district, student.cityRegency, student.province, student.postalCode, student.heightCm, student.weightKg, student.siblingCount, student.birthOrder, student.status, student.alumniDestinationStatus, student.alumniDestinationName, student.alumniDestinationProgram, student.alumniDestinationCity, student.alumniDestinationYear, father.fullName, father.nik, father.phone, father.education, father.educationOther, father.occupation, father.occupationOther, father.monthlyIncome, mother.fullName, mother.nik, mother.phone, mother.education, mother.educationOther, mother.occupation, mother.occupationOther, mother.monthlyIncome, other.fullName, other.nik, other.phone, other.education, other.educationOther, other.occupation, other.occupationOther, other.monthlyIncome, other.relationship, guardian.guardianIsDifferent, guardian.guardianSource, student.createdAt, student.updatedAt];
   });
-  writeSheet(spreadsheet, 'Students', ['ID Siswa', 'Nomor Siswa', 'ID MTs', 'ID MA', 'Nama Lengkap', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'NIK', 'NISN', 'Nomor KK', 'Nomor Paspor', 'Email', 'Telepon', 'WhatsApp', 'Telegram', 'Alamat', 'RT', 'RW', 'Desa/Kelurahan', 'Kecamatan', 'Kota/Kabupaten', 'Provinsi', 'Kode Pos', 'Tinggi (cm)', 'Berat (kg)', 'Jumlah Saudara', 'Anak Ke-', 'Status', 'Status Tujuan Alumni', 'Nama Tujuan Alumni', 'Program Tujuan Alumni', 'Kota Tujuan Alumni', 'Tahun Tujuan Alumni', 'Dibuat Pada', 'Diperbarui Pada'], students);
+  writeSheet(spreadsheet, 'Students', ['ID Siswa', 'Nomor Siswa', 'ID MTs', 'ID MA', 'Nama Lengkap', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'NIK', 'NISN', 'Nomor KK', 'Nomor Paspor', 'Email', 'Telepon', 'WhatsApp', 'Telegram', 'Alamat', 'RT', 'RW', 'Desa/Kelurahan', 'Kecamatan', 'Kota/Kabupaten', 'Provinsi', 'Kode Pos', 'Tinggi (cm)', 'Berat (kg)', 'Jumlah Saudara', 'Anak Ke-', 'Status', 'Status Tujuan Alumni', 'Nama Tujuan Alumni', 'Program Tujuan Alumni', 'Kota Tujuan Alumni', 'Tahun Tujuan Alumni', 'Nama Ayah', 'NIK Ayah', 'Telepon Ayah', 'Pendidikan Ayah', 'Pendidikan Lainnya Ayah', 'Pekerjaan Ayah', 'Pekerjaan Lainnya Ayah', 'Penghasilan Ayah', 'Nama Ibu', 'NIK Ibu', 'Telepon Ibu', 'Pendidikan Ibu', 'Pendidikan Lainnya Ibu', 'Pekerjaan Ibu', 'Pekerjaan Lainnya Ibu', 'Penghasilan Ibu', 'Nama Wali', 'NIK Wali', 'Telepon Wali', 'Pendidikan Wali', 'Pendidikan Lainnya Wali', 'Pekerjaan Wali', 'Pekerjaan Lainnya Wali', 'Penghasilan Wali', 'Hubungan Wali', 'Wali Berbeda', 'Sumber Wali', 'Dibuat Pada', 'Diperbarui Pada'], students);
 
-  var parents = [];
-  var guardians = [];
   var education = [];
   var programs = [];
   rows.forEach(function (student) {
-    (student.parents || []).forEach(function (parent) {
-      parents.push([student.id, student.studentNumber, parent.id, parent.role, parent.fullName, parent.nik, parent.phone, parent.education, parent.educationOther, parent.occupation, parent.occupationOther, parent.monthlyIncome, parent.relationship, parent.createdAt, parent.updatedAt]);
-    });
-    if (student.guardianConfig) {
-      var guardian = student.guardianConfig;
-      guardians.push([student.id, student.studentNumber, guardian.id, guardian.guardianIsDifferent, guardian.guardianSource, guardian.otherParentId]);
-    }
     (student.educationHistories || []).forEach(function (item) {
-      education.push([student.id, student.studentNumber, item.id, item.level, item.institutionName, item.cityRegency, item.province, item.graduationYear, item.degreeLevel, item.createdAt, item.updatedAt]);
+      education.push([student.id, student.studentNumber, student.fullName, student.gender, item.id, item.level, item.institutionName, item.cityRegency, item.province, item.graduationYear, item.degreeLevel, item.createdAt, item.updatedAt]);
     });
     (student.programHistories || []).forEach(function (item) {
-      programs.push([student.id, student.studentNumber, item.id, item.programId, item.program ? item.program.programName : '', item.academicYear, item.status, item.startDate, item.endDate, item.createdAt, item.updatedAt]);
+      programs.push([student.id, student.studentNumber, student.fullName, student.gender, item.id, item.programId, item.program ? item.program.programName : '', item.academicYear, item.status, item.startDate, item.endDate, item.createdAt, item.updatedAt]);
     });
   });
-  writeSheet(spreadsheet, 'Parents', ['ID Siswa', 'Nomor Siswa', 'ID Orang Tua', 'Peran', 'Nama Lengkap', 'NIK', 'Telepon', 'Pendidikan', 'Pendidikan Lainnya', 'Pekerjaan', 'Pekerjaan Lainnya', 'Penghasilan Bulanan', 'Hubungan', 'Dibuat Pada', 'Diperbarui Pada'], parents);
-  writeSheet(spreadsheet, 'Guardians', ['ID Siswa', 'Nomor Siswa', 'ID Wali', 'Wali Berbeda', 'Sumber Wali', 'ID Orang Tua Lain'], guardians);
-  writeSheet(spreadsheet, 'Education History', ['ID Siswa', 'Nomor Siswa', 'ID Riwayat', 'Jenjang', 'Nama Institusi', 'Kota/Kabupaten', 'Provinsi', 'Tahun Lulus', 'Gelar/Jurusan', 'Dibuat Pada', 'Diperbarui Pada'], education);
-  writeSheet(spreadsheet, 'Program History', ['ID Siswa', 'Nomor Siswa', 'ID Riwayat', 'ID Program', 'Nama Program', 'Tahun Ajaran', 'Status', 'Mulai', 'Selesai', 'Dibuat Pada', 'Diperbarui Pada'], programs);
+  writeSheet(spreadsheet, 'Education History', ['ID Siswa', 'Nomor Siswa', 'Nama Lengkap', 'Jenis Kelamin', 'ID Riwayat', 'Jenjang', 'Nama Institusi', 'Kota/Kabupaten', 'Provinsi', 'Tahun Lulus', 'Gelar/Jurusan', 'Dibuat Pada', 'Diperbarui Pada'], education);
+  writeSheet(spreadsheet, 'Program History', ['ID Siswa', 'Nomor Siswa', 'Nama Lengkap', 'Jenis Kelamin', 'ID Riwayat', 'ID Program', 'Nama Program', 'Tahun Ajaran', 'Status', 'Mulai', 'Selesai', 'Dibuat Pada', 'Diperbarui Pada'], programs);
 
   reportBackup(baseUrl, token, period, 'success', rows.length, spreadsheet.getName(), spreadsheet.getUrl(), '');
 }
