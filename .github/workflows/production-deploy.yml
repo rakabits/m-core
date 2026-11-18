@@ -74,11 +74,16 @@ jobs:
           DIRECT_URL: ${{ secrets.PRODUCTION_DIRECT_URL }}
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
       - name: Deploy to Vercel production
-        run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "VERCEL_TOKEN GitHub secret belum dikonfigurasi."
+            exit 1
+          fi
+          npx vercel deploy --prod --yes --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_ORG_ID: team_cCgS6kqky7YZfwjtNUtL0tGO
+          VERCEL_PROJECT_ID: prj_j03ArPPu7S2araHk7ZZWyAcb71e0
       - name: Verify production health
         run: |
           node -e "const u=process.env.PRODUCTION_URL+'/api/v1/health';fetch(u).then(async r=>{if(!r.ok)throw new Error('health check failed: '+r.status);console.log('Production health check passed')})"
