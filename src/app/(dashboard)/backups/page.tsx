@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 type Backup = { id: string; period: string; status: string; totalStudents: number | null; spreadsheetName: string | null; spreadsheetUrl: string | null; errorMessage: string | null; attempts: number; createdAt: string; completedAt: string | null };
+type TriggerResponse = { data?: Backup; error?: { code?: string }; success?: boolean; reused?: boolean; message?: string };
 
 export default function BackupsPage() {
   const [rows, setRows] = useState<Backup[]>([]);
@@ -16,7 +17,7 @@ export default function BackupsPage() {
     catch { return { error: { code: `HTTP_${response.status}` } }; }
   }
   async function load() { setLoading(true); try { const response = await fetch('/api/v1/backups', { cache: 'no-store' }); const body = await readBody(response); if (!response.ok) throw new Error(body.error?.code || 'Gagal memuat riwayat backup'); setRows(body.data || []); } catch (error) { setMessage(error instanceof Error ? error.message : 'Gagal memuat riwayat backup'); } finally { setLoading(false); } }
-  async function trigger() { setTriggering(true); setMessage(''); try { const response = await fetch('/api/v1/backups/trigger', { method: 'POST' }); const body = await readBody(response); if (!response.ok) throw new Error(body.error?.code || 'Gagal membuat permintaan backup'); setMessage('Backup sedang diproses. Halaman akan diperbarui setelah hasil diterima.'); await new Promise(resolve => setTimeout(resolve, 1500)); await load(); } catch (error) { setMessage(error instanceof Error ? error.message : 'Gagal membuat permintaan backup'); } finally { setTriggering(false); } }
+  async function trigger() { setTriggering(true); setMessage('Menghubungi Google Apps Script...'); try { const response = await fetch('/api/v1/backups/trigger', { method: 'POST' }); const text = await response.text(); let body: TriggerResponse = {}; try { body = JSON.parse(text) as TriggerResponse; } catch { body = { error: { code: `HTTP_${response.status}` } }; } if (!response.ok) throw new Error(body.error?.code || `HTTP_${response.status}`); setMessage(body.reused ? 'Backup periode ini sudah selesai.' : 'Backup sedang diproses oleh Google Apps Script.'); await new Promise(resolve => setTimeout(resolve, 2000)); await load(); } catch (error) { setMessage(error instanceof Error ? error.message : 'Gagal memproses backup'); } finally { setTriggering(false); } }
   // The initial request synchronizes this page with the backup API.
   // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, []);
