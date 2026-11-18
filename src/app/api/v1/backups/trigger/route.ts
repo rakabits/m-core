@@ -24,11 +24,16 @@ export async function POST(request: Request) {
   if (!token) return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_TOKEN_MISSING' } }, { status: 500 });
   try {
     const response = await fetch(webAppUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, period }), cache: 'no-store' });
-    if (!response.ok) {
-      const errorText = await response.text();
-      await prisma.backupHistory.update({ where: { id: data.id }, data: { status: 'failed', errorMessage: `Apps Script HTTP ${response.status}: ${errorText.slice(0, 500)}`, completedAt: new Date() } });
-      return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_FAILED' } }, { status: 502 });
+    const responseText = await response.text();
+    let scriptResult: { success?: boolean; error?: string } = {};
+    try { scriptResult = JSON.parse(responseText) as { success?: boolean; error?: string }; } catch { /* Apps Script may return a non-JSON error page. */ }
+    if (!response.ok || scriptResult.success === false) {
+      const detail = scriptResult.error || responseText.slice(0, 500) || `HTTP ${response.status}`;
+      await prisma.backupHistory.update({ where: { id: data.id }, data: { status: 'failed', errorMessage: `Apps Script gagal: ${detail}`, completedAt: new Date() } });
+      return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_FAILED', detail } }, { status: 502 });
     }
+    const completed = await prisma.backupHistory.findUnique({ where: { period } });
+    return NextResponse.json({ success: true, data: completed || data, message: 'Backup selesai diproses.' }, { status: 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Apps Script tidak dapat dihubungi';
     await prisma.backupHistory.update({ where: { id: data.id }, data: { status: 'failed', errorMessage: message, completedAt: new Date() } });
