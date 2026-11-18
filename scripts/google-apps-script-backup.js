@@ -5,7 +5,9 @@
 function runMonthlyMCoreBackup() {
   Logger.log('Backup format: relational-v2');
   var props = PropertiesService.getScriptProperties();
-  var baseUrl = props.getProperty('MCORE_BASE_URL') || 'https://m-core.my.id';
+  var baseUrl = props.getProperty('MCORE_BASE_URL') || 'https://www.m-core.my.id';
+  // Use the canonical host so POST callbacks are not converted by a redirect.
+  baseUrl = baseUrl.replace('://m-core.my.id', '://www.m-core.my.id').replace(/\/$/, '');
   var token = props.getProperty('BACKUP_SCRIPT_TOKEN');
   if (!token) throw new Error('BACKUP_SCRIPT_TOKEN belum dikonfigurasi.');
 
