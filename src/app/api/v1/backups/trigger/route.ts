@@ -32,8 +32,13 @@ export async function POST(request: Request) {
       await prisma.backupHistory.update({ where: { id: data.id }, data: { status: 'failed', errorMessage: `Apps Script gagal: ${detail}`, completedAt: new Date() } });
       return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_FAILED', detail } }, { status: 502 });
     }
-    const completed = await prisma.backupHistory.findUnique({ where: { period } });
-    return NextResponse.json({ success: true, data: completed || data, message: 'Backup selesai diproses.' }, { status: 200 });
+    let completed = await prisma.backupHistory.findUnique({ where: { period } });
+    for (let attempt = 0; attempt < 10 && completed?.status === 'pending'; attempt += 1) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      completed = await prisma.backupHistory.findUnique({ where: { period } });
+    }
+    if (completed?.status === 'failed') return NextResponse.json({ success: false, error: { code: 'BACKUP_FAILED', detail: completed.errorMessage || 'Backup gagal diproses.' }, data: completed }, { status: 502 });
+    return NextResponse.json({ success: true, data: completed || data, message: completed?.status === 'success' ? 'Backup berhasil dibuat.' : 'Backup masih diproses.' }, { status: 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Apps Script tidak dapat dihubungi';
     await prisma.backupHistory.update({ where: { id: data.id }, data: { status: 'failed', errorMessage: message, completedAt: new Date() } });
