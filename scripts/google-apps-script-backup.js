@@ -35,22 +35,47 @@ function runMonthlyMCoreBackup() {
   var backupFolderId = props.getProperty('BACKUP_FOLDER_ID') || '1_aov4mqXs93M-QQeC2nkT5I5OMsvRYDN';
   var backupFolder = DriveApp.getFolderById(backupFolderId);
   DriveApp.getFileById(spreadsheet.getId()).moveTo(backupFolder);
-  var sheet = spreadsheet.getSheets()[0];
-  sheet.setName('Students');
   var rows = payload.data || [];
-  var columns = ['student_id', 'student_number', 'full_name', 'gender', 'birth_place', 'birth_date', 'nik', 'nisn', 'family_card_number', 'passport_number', 'email', 'phone', 'whatsapp', 'address_line', 'address_rt', 'address_rw', 'village', 'district', 'city_regency', 'province', 'postal_code', 'height_cm', 'weight_kg', 'sibling_count', 'birth_order', 'status', 'parents', 'guardian', 'education_histories', 'program_histories', 'created_at', 'updated_at'];
-  var values = [columns].concat(rows.map(function (row) {
-    return columns.map(function (column) {
-      var value = row[column];
-      return value && typeof value === 'object' ? JSON.stringify(value) : value == null ? '' : value;
+  var students = rows.map(function (student) {
+    return [student.id, student.studentNumber, student.mtsStudentId, student.maStudentId, student.fullName, student.gender, student.birthPlace, student.birthDate, student.nik, student.nisn, student.familyCardNumber, student.passportNumber, student.email, student.phone, student.whatsapp, student.telegramUsername, student.addressLine, student.addressRt, student.addressRw, student.village, student.district, student.cityRegency, student.province, student.postalCode, student.heightCm, student.weightKg, student.siblingCount, student.birthOrder, student.status, student.alumniDestinationStatus, student.alumniDestinationName, student.alumniDestinationProgram, student.alumniDestinationCity, student.alumniDestinationYear, student.createdAt, student.updatedAt];
+  });
+  writeSheet(spreadsheet, 'Students', ['ID Siswa', 'Nomor Siswa', 'ID MTs', 'ID MA', 'Nama Lengkap', 'Jenis Kelamin', 'Tempat Lahir', 'Tanggal Lahir', 'NIK', 'NISN', 'Nomor KK', 'Nomor Paspor', 'Email', 'Telepon', 'WhatsApp', 'Telegram', 'Alamat', 'RT', 'RW', 'Desa/Kelurahan', 'Kecamatan', 'Kota/Kabupaten', 'Provinsi', 'Kode Pos', 'Tinggi (cm)', 'Berat (kg)', 'Jumlah Saudara', 'Anak Ke-', 'Status', 'Status Tujuan Alumni', 'Nama Tujuan Alumni', 'Program Tujuan Alumni', 'Kota Tujuan Alumni', 'Tahun Tujuan Alumni', 'Dibuat Pada', 'Diperbarui Pada'], students);
+
+  var parents = [];
+  var guardians = [];
+  var education = [];
+  var programs = [];
+  rows.forEach(function (student) {
+    (student.parents || []).forEach(function (parent) {
+      parents.push([student.id, student.studentNumber, parent.id, parent.role, parent.fullName, parent.nik, parent.phone, parent.education, parent.educationOther, parent.occupation, parent.occupationOther, parent.monthlyIncome, parent.relationship, parent.createdAt, parent.updatedAt]);
     });
-  }));
-  if (values.length) sheet.getRange(1, 1, values.length, columns.length).setValues(values);
-  sheet.setFrozenRows(1);
-  sheet.getRange(1, 1, 1, columns.length).setFontWeight('bold');
-  sheet.autoResizeColumns(1, columns.length);
+    if (student.guardianConfig) {
+      var guardian = student.guardianConfig;
+      guardians.push([student.id, student.studentNumber, guardian.id, guardian.guardianIsDifferent, guardian.guardianSource, guardian.otherParentId]);
+    }
+    (student.educationHistories || []).forEach(function (item) {
+      education.push([student.id, student.studentNumber, item.id, item.level, item.institutionName, item.cityRegency, item.province, item.graduationYear, item.degreeLevel, item.createdAt, item.updatedAt]);
+    });
+    (student.programHistories || []).forEach(function (item) {
+      programs.push([student.id, student.studentNumber, item.id, item.programId, item.program ? item.program.programName : '', item.academicYear, item.status, item.startDate, item.endDate, item.createdAt, item.updatedAt]);
+    });
+  });
+  writeSheet(spreadsheet, 'Parents', ['ID Siswa', 'Nomor Siswa', 'ID Orang Tua', 'Peran', 'Nama Lengkap', 'NIK', 'Telepon', 'Pendidikan', 'Pendidikan Lainnya', 'Pekerjaan', 'Pekerjaan Lainnya', 'Penghasilan Bulanan', 'Hubungan', 'Dibuat Pada', 'Diperbarui Pada'], parents);
+  writeSheet(spreadsheet, 'Guardians', ['ID Siswa', 'Nomor Siswa', 'ID Wali', 'Wali Berbeda', 'Sumber Wali', 'ID Orang Tua Lain'], guardians);
+  writeSheet(spreadsheet, 'Education History', ['ID Siswa', 'Nomor Siswa', 'ID Riwayat', 'Jenjang', 'Nama Institusi', 'Kota/Kabupaten', 'Provinsi', 'Tahun Lulus', 'Gelar/Jurusan', 'Dibuat Pada', 'Diperbarui Pada'], education);
+  writeSheet(spreadsheet, 'Program History', ['ID Siswa', 'Nomor Siswa', 'ID Riwayat', 'ID Program', 'Nama Program', 'Tahun Ajaran', 'Status', 'Mulai', 'Selesai', 'Dibuat Pada', 'Diperbarui Pada'], programs);
 
   reportBackup(baseUrl, token, period, 'success', rows.length, spreadsheet.getName(), spreadsheet.getUrl(), '');
+}
+
+function writeSheet(spreadsheet, name, headers, rows) {
+  var sheet = spreadsheet.getSheetByName(name) || spreadsheet.insertSheet(name);
+  sheet.clear();
+  var values = [headers].concat(rows);
+  sheet.getRange(1, 1, values.length, headers.length).setValues(values);
+  sheet.setFrozenRows(1);
+  sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+  sheet.autoResizeColumns(1, headers.length);
 }
 
 function reportBackup(baseUrl, token, period, status, totalStudents, spreadsheetName, spreadsheetUrl, errorMessage) {
