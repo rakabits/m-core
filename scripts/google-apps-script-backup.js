@@ -60,6 +60,7 @@ function runMonthlyMCoreBackup() {
   });
   writeSheet(spreadsheet, 'Education History', ['ID Siswa', 'Nomor Siswa', 'Nama Lengkap', 'Jenis Kelamin', 'ID Riwayat', 'Jenjang', 'Nama Institusi', 'Kota/Kabupaten', 'Provinsi', 'Tahun Lulus', 'Gelar/Jurusan', 'Dibuat Pada', 'Diperbarui Pada'], education);
   writeSheet(spreadsheet, 'Program History', ['ID Siswa', 'Nomor Siswa', 'Nama Lengkap', 'Jenis Kelamin', 'ID Riwayat', 'ID Program', 'Nama Program', 'Tahun Ajaran', 'Status', 'Mulai', 'Selesai', 'Dibuat Pada', 'Diperbarui Pada'], programs);
+  removeDefaultSheet(spreadsheet);
 
   reportBackup(baseUrl, token, period, 'success', rows.length, spreadsheet.getName(), spreadsheet.getUrl(), '');
 }
@@ -69,6 +70,13 @@ function formatDateOnly(value) {
   var date = new Date(value);
   if (isNaN(date.getTime())) return value;
   return Utilities.formatDate(date, 'Asia/Jakarta', 'yyyy-MM-dd');
+}
+
+function removeDefaultSheet(spreadsheet) {
+  var defaultSheet = spreadsheet.getSheetByName('Sheet1');
+  if (defaultSheet && spreadsheet.getSheets().length > 1) {
+    spreadsheet.deleteSheet(defaultSheet);
+  }
 }
 
 function writeSheet(spreadsheet, name, headers, rows) {
