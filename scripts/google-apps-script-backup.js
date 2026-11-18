@@ -90,13 +90,18 @@ function writeSheet(spreadsheet, name, headers, rows) {
 }
 
 function reportBackup(baseUrl, token, period, status, totalStudents, spreadsheetName, spreadsheetUrl, errorMessage) {
-  UrlFetchApp.fetch(baseUrl + '/api/v1/backups/callback', {
+  var response = UrlFetchApp.fetch(baseUrl + '/api/v1/backups/callback', {
     method: 'post',
     contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
     payload: JSON.stringify({ period: period, status: status, totalStudents: totalStudents, spreadsheetName: spreadsheetName, spreadsheetUrl: spreadsheetUrl, errorMessage: errorMessage || '', attempts: 1 }),
     muteHttpExceptions: true,
   });
+  var statusCode = response.getResponseCode();
+  var responseText = response.getContentText();
+  Logger.log('Callback HTTP status: ' + statusCode);
+  Logger.log('Callback response: ' + responseText.substring(0, 500));
+  if (statusCode >= 300) throw new Error('Callback backup gagal. HTTP ' + statusCode + ': ' + responseText.substring(0, 500));
 }
 
 function installMonthlyTrigger() {
