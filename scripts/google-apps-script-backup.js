@@ -32,6 +32,9 @@ function runMonthlyMCoreBackup() {
   }
 
   var spreadsheet = SpreadsheetApp.create('M-CORE Master Students ' + period);
+  var backupFolderId = props.getProperty('BACKUP_FOLDER_ID') || '1_aov4mqXs93M-QQeC2nkT5I5OMsvRYDN';
+  var backupFolder = DriveApp.getFolderById(backupFolderId);
+  DriveApp.getFileById(spreadsheet.getId()).moveTo(backupFolder);
   var sheet = spreadsheet.getSheets()[0];
   sheet.setName('Students');
   var rows = payload.data || [];
