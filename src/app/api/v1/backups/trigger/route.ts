@@ -2,7 +2,12 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/local';
 import { prisma } from '@/core/database/prisma';
 
-const periodNow = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit' }).format(new Date());
+const periodNow = () => {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit' }).formatToParts(new Date());
+  const year = parts.find(part => part.type === 'year')?.value;
+  const month = parts.find(part => part.type === 'month')?.value;
+  return `${year}-${month}`;
+};
 
 async function admin() {
   const user = await getCurrentUser();
@@ -18,22 +23,23 @@ export async function POST(request: Request) {
   const force = new URL(request.url).searchParams.get('force') === 'true';
   const existing = await prisma.backupHistory.findUnique({ where: { period } });
   if (existing?.status === 'success' && !force) return NextResponse.json({ success: true, data: existing, reused: true });
-  const data = await prisma.backupHistory.upsert({ where: { period }, create: { period, status: 'pending', attempts: 0 }, update: { status: 'pending', errorMessage: null } });
-  const webAppUrl = process.env.BACKUP_SCRIPT_WEB_APP_URL || 'https://script.google.com/macros/s/AKfycbztheVBXRpuZ7m2qgZjee-rA4Wi73TMKtBF0G_j5Efx9KSrmsxFFkZSnvLK1gIlfTiSpw/exec';
+  const webAppUrl = process.env.BACKUP_SCRIPT_WEB_APP_URL;
   const token = process.env.BACKUP_SCRIPT_TOKEN;
+  if (!webAppUrl) return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_URL_MISSING' } }, { status: 500 });
   if (!token) return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_TOKEN_MISSING' } }, { status: 500 });
+  const data = await prisma.backupHistory.upsert({ where: { period }, create: { period, status: 'pending', attempts: 1, startedAt: new Date() }, update: { status: 'pending', errorMessage: null, attempts: { increment: 1 }, startedAt: new Date(), completedAt: null } });
   try {
     const response = await fetch(webAppUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, period }), cache: 'no-store' });
     const responseText = await response.text();
     let scriptResult: { success?: boolean; error?: string } = {};
     try { scriptResult = JSON.parse(responseText) as { success?: boolean; error?: string }; } catch { /* Apps Script may return a non-JSON error page. */ }
-    if (!response.ok || scriptResult.success === false) {
+    if (!response.ok || scriptResult.success !== true) {
       const detail = scriptResult.error || responseText.slice(0, 500) || `HTTP ${response.status}`;
       await prisma.backupHistory.update({ where: { id: data.id }, data: { status: 'failed', errorMessage: `Apps Script gagal: ${detail}`, completedAt: new Date() } });
       return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_FAILED', detail } }, { status: 502 });
     }
     let completed = await prisma.backupHistory.findUnique({ where: { period } });
-    for (let attempt = 0; attempt < 10 && completed?.status === 'pending'; attempt += 1) {
+    for (let attempt = 0; attempt < 10 && (completed?.status === 'pending' || completed?.status === 'running'); attempt += 1) {
       await new Promise(resolve => setTimeout(resolve, 1000));
       completed = await prisma.backupHistory.findUnique({ where: { period } });
     }
@@ -42,7 +48,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Apps Script tidak dapat dihubungi';
     await prisma.backupHistory.update({ where: { id: data.id }, data: { status: 'failed', errorMessage: message, completedAt: new Date() } });
-    return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_UNREACHABLE' } }, { status: 502 });
+    return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_UNREACHABLE', detail: message } }, { status: 502 });
   }
-  return NextResponse.json({ success: true, data, message: 'Backup sedang diproses oleh Google Apps Script.' }, { status: 202 });
 }
