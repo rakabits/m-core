@@ -624,7 +624,7 @@ model ScopeAssignment {
 
 model BackupHistory {
   id             String       @id @default(uuid()) @map("backup_id")
-  period         String       @unique @db.VarChar(7)
+  period         String       @db.VarChar(7)
   status         BackupStatus @default(pending)
   totalStudents  Int?         @map("total_students")
   spreadsheetName String?     @map("spreadsheet_name") @db.VarChar(255)

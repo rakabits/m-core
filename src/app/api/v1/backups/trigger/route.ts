@@ -16,20 +16,17 @@ async function admin() {
   return profile?.isActive && profile.roles.some(({ role }) => role.name === 'SUPER_ADMIN' || role.name === 'ADMIN') ? profile : null;
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   const user = await admin();
   if (!user) return NextResponse.json({ success: false, error: { code: 'FORBIDDEN' } }, { status: 403 });
   const period = periodNow();
-  const force = new URL(request.url).searchParams.get('force') === 'true';
-  const existing = await prisma.backupHistory.findUnique({ where: { period } });
-  if (existing?.status === 'success' && !force) return NextResponse.json({ success: true, data: existing, reused: true });
   const webAppUrl = process.env.BACKUP_SCRIPT_WEB_APP_URL;
   const token = process.env.BACKUP_SCRIPT_TOKEN;
   if (!webAppUrl) return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_URL_MISSING' } }, { status: 500 });
   if (!token) return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_TOKEN_MISSING' } }, { status: 500 });
-  const data = await prisma.backupHistory.upsert({ where: { period }, create: { period, status: 'pending', attempts: 1, startedAt: new Date() }, update: { status: 'pending', errorMessage: null, attempts: { increment: 1 }, startedAt: new Date(), completedAt: null } });
+  const data = await prisma.backupHistory.create({ data: { period, status: 'pending', attempts: 1, startedAt: new Date() } });
   try {
-    const response = await fetch(webAppUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, period }), cache: 'no-store' });
+    const response = await fetch(webAppUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, period, backupId: data.id }), cache: 'no-store' });
     const responseText = await response.text();
     let scriptResult: { success?: boolean; error?: string } = {};
     try { scriptResult = JSON.parse(responseText) as { success?: boolean; error?: string }; } catch { /* Apps Script may return a non-JSON error page. */ }
@@ -38,10 +35,10 @@ export async function POST(request: Request) {
       await prisma.backupHistory.update({ where: { id: data.id }, data: { status: 'failed', errorMessage: `Apps Script gagal: ${detail}`, completedAt: new Date() } });
       return NextResponse.json({ success: false, error: { code: 'BACKUP_SCRIPT_FAILED', detail } }, { status: 502 });
     }
-    let completed = await prisma.backupHistory.findUnique({ where: { period } });
+    let completed = await prisma.backupHistory.findUnique({ where: { id: data.id } });
     for (let attempt = 0; attempt < 10 && (completed?.status === 'pending' || completed?.status === 'running'); attempt += 1) {
       await new Promise(resolve => setTimeout(resolve, 1000));
-      completed = await prisma.backupHistory.findUnique({ where: { period } });
+      completed = await prisma.backupHistory.findUnique({ where: { id: data.id } });
     }
     if (completed?.status === 'failed') return NextResponse.json({ success: false, error: { code: 'BACKUP_FAILED', detail: completed.errorMessage || 'Backup gagal diproses.' }, data: completed }, { status: 502 });
     return NextResponse.json({ success: true, data: completed || data, message: completed?.status === 'success' ? 'Backup berhasil dibuat.' : 'Backup masih diproses.' }, { status: 200 });

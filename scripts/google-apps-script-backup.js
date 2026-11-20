@@ -7,7 +7,7 @@ function doPost(event) {
     var body = JSON.parse(event.postData.contents || '{}');
     var expectedToken = PropertiesService.getScriptProperties().getProperty('BACKUP_SCRIPT_TOKEN');
     if (!expectedToken || body.token !== expectedToken) return jsonResponse({ success: false, error: 'UNAUTHORIZED' });
-    runMonthlyMCoreBackup(body.period);
+    runMonthlyMCoreBackup(body.period, body.backupId);
     return jsonResponse({ success: true });
   } catch (error) {
     return jsonResponse({ success: false, error: String(error) });
@@ -18,7 +18,8 @@ function jsonResponse(body) {
   return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON);
 }
 
-function runMonthlyMCoreBackup(requestedPeriod) {
+function runMonthlyMCoreBackup(requestedPeriod, backupId) {
+  backupId = backupId || '';
   Logger.log('Backup format: relational-v2');
   var props = PropertiesService.getScriptProperties();
   var baseUrl = props.getProperty('MCORE_BASE_URL') || 'https://www.m-core.my.id';
@@ -46,7 +47,7 @@ function runMonthlyMCoreBackup(requestedPeriod) {
     if (attempt < 3) Utilities.sleep(5000 * attempt);
   }
   if (!payload || !payload.success) {
-    reportBackup(baseUrl, token, period, 'failed', 0, '', '', lastError);
+    reportBackup(baseUrl, token, backupId, period, 'failed', 0, '', '', lastError);
     throw new Error('Gagal mengambil payload M-CORE setelah 3 percobaan: ' + lastError);
   }
 
@@ -80,7 +81,7 @@ function runMonthlyMCoreBackup(requestedPeriod) {
   writeSheet(spreadsheet, 'Program History', ['ID Siswa', 'Nomor Siswa', 'Nama Lengkap', 'Jenis Kelamin', 'ID Riwayat', 'ID Program', 'Nama Program', 'Tahun Ajaran', 'Status', 'Mulai', 'Selesai', 'Dibuat Pada', 'Diperbarui Pada'], programs);
   removeDefaultSheet(spreadsheet);
 
-  reportBackup(baseUrl, token, period, 'success', rows.length, spreadsheet.getName(), spreadsheet.getUrl(), '');
+  reportBackup(baseUrl, token, backupId, period, 'success', rows.length, spreadsheet.getName(), spreadsheet.getUrl(), '');
 }
 
 function formatDateOnly(value) {
@@ -107,12 +108,12 @@ function writeSheet(spreadsheet, name, headers, rows) {
   sheet.autoResizeColumns(1, headers.length);
 }
 
-function reportBackup(baseUrl, token, period, status, totalStudents, spreadsheetName, spreadsheetUrl, errorMessage) {
+function reportBackup(baseUrl, token, backupId, period, status, totalStudents, spreadsheetName, spreadsheetUrl, errorMessage) {
   var response = UrlFetchApp.fetch(baseUrl + '/api/v1/backups/callback', {
     method: 'post',
     contentType: 'application/json',
     headers: { Authorization: 'Bearer ' + token },
-    payload: JSON.stringify({ period: period, status: status, totalStudents: totalStudents, spreadsheetName: spreadsheetName, spreadsheetUrl: spreadsheetUrl, errorMessage: errorMessage || '', attempts: 1 }),
+    payload: JSON.stringify({ backupId: backupId, period: period, status: status, totalStudents: totalStudents, spreadsheetName: spreadsheetName, spreadsheetUrl: spreadsheetUrl, errorMessage: errorMessage || '', attempts: 1 }),
     muteHttpExceptions: true,
   });
   var statusCode = response.getResponseCode();
